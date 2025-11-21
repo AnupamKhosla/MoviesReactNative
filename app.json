@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Movies database",
-    "slug": "Movies database",
+    "slug": "Movies-database",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,13 +15,15 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.user31782.Moviesdatabase"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#950D0D"
-      }
+      },
+      "package": "com.user31782.Moviesdatabase"
     },
     "web": {
       "favicon": "./assets/favicon.png"

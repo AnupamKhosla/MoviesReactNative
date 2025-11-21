@@ -1,13 +1,14 @@
 import React from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import {
   NavigationContainer,
   DefaultTheme,
   DarkTheme,
 } from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import AntIcon from 'react-native-vector-icons/AntDesign';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+
 
 
 
@@ -81,7 +82,9 @@ const tabBarOptions = {
   tabBarActiveTintColor: 'rgba(235, 204, 204, 1)',
   tabBarInactiveTintColor: 'rgba(235, 204, 204, 0.4)',
   tabBarStyle: {
-    height: '7%',
+    //platofrm
+    height: Platform.OS === 'ios' ? 60 : 100,
+    ...(Platform.OS === 'ios' && { paddingBottom: 0 }),
     backgroundColor: '#7F0000',
     borderColor: 'white',
     borderTopWidth: 0,
@@ -102,8 +105,8 @@ const RootNavigator = () => {
               name="Search"
               component={ScreenOne}
               options={{
-                tabBarIcon: ({color, size}) => (              
-                  <AntIcon name="search1" color={color} size={size} />
+                tabBarIcon: ({color, size}) => (  
+                  <Ionicons name="search-outline" color={color} size={size} />    
                 ), 
               }}
             />
@@ -113,7 +116,7 @@ const RootNavigator = () => {
               component={ScreenTwo}
               options={{
                 tabBarIcon: ({color, size}) => (
-                  <AntIcon name="videocamera" color={color} size={size} />              
+                  <Ionicons name="film-outline" color={color} size={size} />                               
                 ),
               }}
             />
@@ -122,7 +125,7 @@ const RootNavigator = () => {
               component={ScreenThree}
               options={{
                 tabBarIcon: ({color, size}) => (
-                  <AntIcon name="hearto" color={color} size={size} />
+                  <Ionicons name="heart-outline" color={color} size={size} />
                 ),
               }}
             />

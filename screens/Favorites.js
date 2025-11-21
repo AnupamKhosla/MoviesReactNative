@@ -3,7 +3,7 @@
 import React from 'react';
 import {Text, View, FlatList, TouchableOpacity, Image, StyleSheet} from 'react-native';
 import {useSelector, useDispatch} from 'react-redux';
-import AntIcon from 'react-native-vector-icons/AntDesign';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import {removeFavorite} from '../redux/actions';
 
 
@@ -53,7 +53,7 @@ const Favorites = () => {
                           marginTop: 10,
                           alignItems: 'center',
                         }}>
-                        <AntIcon color="rgb(202, 182, 104)" name="like1" size={32} />
+                        <Ionicons color="rgb(202, 182, 104)" name="thumbs-up-sharp" size={32} />
                         <Text
                           style={{
                             fontSize: 18,
@@ -75,7 +75,7 @@ const Favorites = () => {
                             height: 40,
                             width: 40,
                           }}>
-                          <AntIcon
+                          <Ionicons
                           color="orange"
                           size={32}
                           name='heart'

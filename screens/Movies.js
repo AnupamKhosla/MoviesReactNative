@@ -3,8 +3,8 @@
 import React, {useEffect} from 'react';
 import {View, Text, FlatList, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import {useSelector, useDispatch} from 'react-redux';
-import AntIcon from 'react-native-vector-icons/AntDesign';
-import {getMovies, addFavorite, removeFavorite} from '../redux/actions';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { getMovies, addFavorite, removeFavorite } from '../redux/actions';
 
 
 const BooksList = () => {
@@ -62,7 +62,7 @@ const BooksList = () => {
                         marginTop: 10,
                         alignItems: 'center',
                       }}>
-                      <AntIcon color="rgb(202, 182, 104)" name="like1" size={32} />
+                      <Ionicons color="rgb(202, 182, 104)" name="thumbs-up-sharp" size={32} />
                       <Text
                         style={{
                           fontSize: 18,
@@ -86,10 +86,10 @@ const BooksList = () => {
                           height: 40,
                           width: 40,
                         }}>
-                        <AntIcon
+                        <Ionicons
                           color="orange"
                           size={32}
-                          name={exists(item) ? 'heart' : 'hearto'}
+                          name={exists(item) ? 'heart' : 'heart-outline'}
                         />
                       </TouchableOpacity>
                     </View>

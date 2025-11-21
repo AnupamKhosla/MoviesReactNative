@@ -17,6 +17,11 @@ web-build/
 *.key
 *.mobileprovision
 
+# native build folders
+# Assuming CNG kind of workflow so native folders need not be manually edited
+android
+ios
+
 # Metro
 .metro-health-check*
 

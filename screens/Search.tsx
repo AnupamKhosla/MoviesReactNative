@@ -1,11 +1,12 @@
 // screens/Search.tsx
 
-import { SearchBar } from '@rneui/themed';
+//import { SearchBar } from '@rneui/themed';
+import SearchBar from '../components/SearchBar';
 
 import React, {useEffect} from 'react';
 import {View, Text, FlatList, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import {useSelector, useDispatch} from 'react-redux';
-import AntIcon from 'react-native-vector-icons/AntDesign';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import {getMovies, addFavorite, removeFavorite, searchMovies} from '../redux/actions';
 
 
@@ -43,7 +44,7 @@ export default function Search() {
   
   return (
     <View style={{flex: 1, marginTop: 0, paddingHorizontal: 20}}>
-
+      {/* 20px to outdo negative margin */}
      <SearchBar
       placeholder="Type Here..."
       placeholderTextColor="rgba(255, 255, 255, 0.4)"
@@ -65,7 +66,6 @@ export default function Search() {
       inputStyle={{
         color: 'rgba(255, 255, 255, 0.8)',
         fontSize: 20,
-        paddingBottom: 5,
       }}
       searchIcon={{
         size: 24,
@@ -106,7 +106,7 @@ export default function Search() {
                         marginTop: 10,
                         alignItems: 'center',
                       }}>
-                      <AntIcon color="rgb(202, 182, 104)" name="like1" size={32} />
+                      <Ionicons color="rgb(202, 182, 104)" name="thumbs-up-sharp" size={32} />
                       <Text
                         style={{
                           fontSize: 18,
@@ -130,10 +130,10 @@ export default function Search() {
                           height: 40,
                           width: 40,
                         }}>
-                        <AntIcon
+                        <Ionicons
                           color="orange"
                           size={32}
-                          name={exists(item) ? 'heart' : 'hearto'}
+                          name={exists(item) ? 'heart' : 'heart-outline'}
                         />
                       </TouchableOpacity>
                     </View>
