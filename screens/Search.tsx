@@ -4,7 +4,7 @@
 import SearchBar from '../components/SearchBar';
 
 import React, {useEffect} from 'react';
-import {View, Text, FlatList, Image, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator} from 'react-native';
 import {useSelector, useDispatch} from 'react-redux';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import {getMovies, addFavorite, removeFavorite, searchMovies} from '../redux/actions';
@@ -16,6 +16,8 @@ import {getMovies, addFavorite, removeFavorite, searchMovies} from '../redux/act
 export default function Search() {
   const [query, setQuery] = React.useState('Avengers');
   const {searchResults, favorites} = useSelector(state => state.moviesReducer);
+  const { initialLoading, error } = useSelector(state => state.moviesReducer);
+
   const dispatch = useDispatch();
   const fetchSearch = (query) => dispatch(searchMovies(query));
   const addToFavorites = movie => dispatch(addFavorite(movie));
@@ -39,8 +41,30 @@ export default function Search() {
 
 
   useEffect(() => {
+    console.log('results', searchResults);
     fetchSearch(query);       
   }, []);
+  
+  if (initialLoading) {
+    return (
+      <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
+        <Text style={{ color:'red' }}>Failed to load. {error}</Text>
+
+        <TouchableOpacity onPress={() => fetchSearch(query)}>
+          <Text style={{ color:'white', marginTop:10 }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   
   return (
     <View style={{flex: 1, marginTop: 0, paddingHorizontal: 20}}>

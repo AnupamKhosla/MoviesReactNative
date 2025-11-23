@@ -19,7 +19,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 
 // import screens
 import BooksList from '../screens/Movies.js';
-import Favorites from '../screens/Favorites';
+import Favorites from '../screens/Favourites.js';
 import Search    from '../screens/Search';
 
 console.log(BooksList)
@@ -121,7 +121,7 @@ const RootNavigator = () => {
               }}
             />
             <Tab.Screen
-              name="Favorites"
+              name="Favourites"
               component={ScreenThree}
               options={{
                 tabBarIcon: ({color, size}) => (
