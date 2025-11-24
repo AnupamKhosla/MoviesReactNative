@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "Movies database",
-    "slug": "Movies-database",
-    "version": "1.0.0",
+    "slug": "movies-database",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -16,17 +16,24 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.user31782.Moviesdatabase"
+      "bundleIdentifier": "movies.database"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#950D0D"
       },
-      "package": "com.user31782.Moviesdatabase"
+      "package": "movies.database",
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3be471e0-041e-4dab-93a2-4c8c1b883e55"
+      }
+    },
+    "owner": "user31782"
   }
 }

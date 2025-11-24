@@ -39,3 +39,10 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+#private keys and credentials
+credentials.json
+credentials  
+
+#build aab files
+*.aab
