@@ -44,11 +44,11 @@ const BooksList = () => {
 
   if (error) {
     return (
-      <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
-        <Text style={{ color:'red' }}>Failed to load. {error}</Text>
+      <View style={{ flex:1, justifyContent:'center', alignItems:'center', paddingHorizontal:40 }}>
+        <Text style={{ color:'red', fontSize:16 }}>Failed to load. {error}</Text>
 
         <TouchableOpacity onPress={() => fetchMovies()}>
-          <Text style={{ color:'white', marginTop:10 }}>Retry</Text>
+          <Text style={{ color:'white', marginTop:10, fontSize:18 }}>Retry</Text>
         </TouchableOpacity>
       </View>
     );

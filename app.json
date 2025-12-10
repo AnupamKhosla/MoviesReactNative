@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/adaptive-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#950D0D"
     },
@@ -24,7 +24,7 @@
         "backgroundColor": "#950D0D"
       },
       "package": "movies.database",
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,6 +34,16 @@
         "projectId": "3be471e0-041e-4dab-93a2-4c8c1b883e55"
       }
     },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#950D0D",
+          "image": "./assets/adaptive-icon.png",
+          "imageWidth": 200  
+        }
+      ]
+    ],
     "owner": "user31782"
   }
 }
