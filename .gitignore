@@ -46,3 +46,5 @@ credentials
 
 #build aab files
 *.aab
+*.apk
+*.ipa

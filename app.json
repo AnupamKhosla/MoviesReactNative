@@ -16,7 +16,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "movies.database"
+      "bundleIdentifier": "movies.database",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -40,7 +43,7 @@
         {
           "backgroundColor": "#950D0D",
           "image": "./assets/adaptive-icon.png",
-          "imageWidth": 200  
+          "imageWidth": 200
         }
       ]
     ],
