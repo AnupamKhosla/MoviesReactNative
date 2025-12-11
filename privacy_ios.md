@@ -1,7 +1,3 @@
-Here is the updated Privacy Policy for your **Movies Database** app. I have removed all references to location/geolocation and weather APIs, and replaced the third-party section with relevant terminology for a movie app (e.g., Movie Data APIs).
-
-***
-
 # Privacy Policy
 
 This privacy policy applies to the **Movies Database** app (hereby referred to as "Application") for mobile devices that was created by **Anupam khosla** (hereby referred to as "Service Provider") as an Open Source service. This service is intended for use "AS IS".
