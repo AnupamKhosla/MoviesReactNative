@@ -51,6 +51,7 @@ debug.keystore
 *.ipa
 
 #api keys
-./firebase/firebaseConfig.ts
-./firebase/GoogleService-Info.plist
-./firebase/google-services.json
+firebase/firebaseConfig.ts
+firebase/GoogleService-Info.plist
+firebase/google-services.json
+firebase/client_secret_667258439454-eiitfa8b7cqufjjqeogdsk9o5fa8dpte.apps.googleusercontent.com.json

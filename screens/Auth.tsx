@@ -42,12 +42,27 @@ export default function Auth() {
   };
 
   return (
-    <View style={styles.container}>
-      <Button title="Login with Google" onPress={handleGoogleLogin} />
+    <View style={styles.containerLogin}>
+      <Button style={styles.LoginBtn} title="Login with Google" onPress={handleGoogleLogin} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' }
+  container: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: '#e89678ff',
+    borderRadius: 10, 
+    overflow: 'hidden',
+    paddingTop: 500,
+  },
+  LoginBtn: { 
+    padding: 10, 
+    borderRadius: 5, 
+    backgroundColor: '#4285F4', 
+    color: '#fff',
+    marginTop: 100,
+  },
 });
