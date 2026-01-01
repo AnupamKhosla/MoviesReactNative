@@ -43,8 +43,14 @@ yarn-error.*
 #private keys and credentials
 credentials.json
 credentials  
+debug.keystore
 
 #build aab files
 *.aab
 *.apk
 *.ipa
+
+#api keys
+./firebase/firebaseConfig.ts
+./firebase/GoogleService-Info.plist
+./firebase/google-services.json

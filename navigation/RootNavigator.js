@@ -21,8 +21,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import BooksList from '../screens/Movies.js';
 import Favorites from '../screens/Favourites.js';
 import Search    from '../screens/Search';
-
-console.log(BooksList)
+import Auth      from '../screens/Auth';
 
 const MyTheme = {
   dark: true,
@@ -74,6 +73,13 @@ const ScreenThree = () => {
   )
 }
 
+const ScreenFour = () => {
+  return (
+    <ScreenTemplate headerPadding>
+      <Auth/>
+    </ScreenTemplate>
+  )
+}
 
 
 const Tab = createBottomTabNavigator();
@@ -126,6 +132,16 @@ const RootNavigator = () => {
               options={{
                 tabBarIcon: ({color, size}) => (
                   <Ionicons name="heart-outline" color={color} size={size} />
+                ),
+              }}
+            />
+
+            <Tab.Screen
+              name="Auth"
+              component={ScreenFour}
+              options={{
+                tabBarIcon: ({color, size}) => (
+                  <Ionicons name="person-circle-outline" color={color} size={size} />
                 ),
               }}
             />

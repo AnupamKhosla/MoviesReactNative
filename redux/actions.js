@@ -21,7 +21,8 @@ export const REMOVE_FAVORITE_ITEM = "REMOVE_FAVORITE_ITEM";
 const API_URL = "https://api.themoviedb.org/3/movie/popular";
 const API_KEY = process.env.EXPO_PUBLIC_API_KEY;
 const BASE_URL = `${API_URL}?api_key=${API_KEY}&page=1`;
-
+//testing lag
+//const BASE_URL = 'https://httpbin.org/delay/6'; //6s delay test
 /* ------------------------------------------------------
    DEV-SAFE LOGS
    (Won't leak keys in production)
@@ -36,6 +37,10 @@ if (__DEV__) {
 let firstSearchDone = false; //loading spinner on first search only
 
 
+//Themoviesdb server is sometimes down
+//We set timout 5secs on axios and retriy one more time and then show error.
+
+
 /* ------------------------------------------------------
    GET POPULAR MOVIES
 -------------------------------------------------------*/
@@ -48,14 +53,16 @@ export const getMovies = (tries = 0) => {
     try {
       if (__DEV__) console.log(`Fetching movies (attempt ${tries + 1})`);
 
-      const res = await axios.get(BASE_URL);
+      const res = await axios.get(BASE_URL, {
+        timeout: 5000, // 5 second timeout IMPORTANT, API is down sometimes
+      });
 
       // Validate TMDB data
       if (!res.data?.results) {
         if (__DEV__) console.log("Invalid TMDB response:", res.data);
 
-        if (tries < 3) {
-          setTimeout(() => dispatch(getMovies(tries + 1)), 1500);
+        if (tries < 1) {
+          setTimeout(() => dispatch(getMovies(tries + 1)), 500);
         } else {
           dispatch({
             type: GET_MOVIES_ERROR,
@@ -84,8 +91,8 @@ export const getMovies = (tries = 0) => {
       }
 
       // Retry transient errors
-      if (tries < 3) {
-        setTimeout(() => dispatch(getMovies(tries + 1)), 1500);
+      if (tries < 1) {
+        setTimeout(() => dispatch(getMovies(tries + 1)), 500);
       } else {
         dispatch({
           type: GET_MOVIES_ERROR,
@@ -110,15 +117,16 @@ export const searchMovies = (query, tries = 0) => {
       if (__DEV__) console.log(`Search attempt ${tries + 1}:`, query);
 
       const res = await axios.get(
-        `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`
+        `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`,
+        { timeout: 5000 }, // 5 second timeout
       );
 
       if (!res.data?.results) {
         if (__DEV__)
           console.log("Invalid TMDB search response:", res.data);
 
-        if (tries < 3) {
-          setTimeout(() => dispatch(searchMovies(query, tries + 1)), 1500);
+        if (tries < 1) {
+          setTimeout(() => dispatch(searchMovies(query, tries + 1)), 500);
         } else {
           dispatch({
             type: SEARCH_MOVIES_ERROR,
@@ -147,8 +155,8 @@ export const searchMovies = (query, tries = 0) => {
         return;
       }
 
-      if (tries < 3) {
-        setTimeout(() => dispatch(searchMovies(query, tries + 1)), 1500);
+      if (tries < 1) {
+        setTimeout(() => dispatch(searchMovies(query, tries + 1)), 500);
       } else {
         dispatch({
           type: SEARCH_MOVIES_ERROR,

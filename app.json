@@ -19,7 +19,8 @@
       "bundleIdentifier": "movies.database",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "googleServicesFile": "./firebase/GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -27,6 +28,7 @@
         "backgroundColor": "#950D0D"
       },
       "package": "movies.database",
+      "googleServicesFile": "./firebase/google-services.json",
       "versionCode": 3
     },
     "web": {
@@ -45,7 +47,14 @@
           "image": "./assets/adaptive-icon.png",
           "imageWidth": 200
         }
-      ]
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.667258439454-uaqhtvo679k7lt2sod0et7hmu2tajm8f"
+        }
+      ],
+      "expo-web-browser"
     ],
     "owner": "user31782"
   }
