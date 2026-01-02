@@ -51,6 +51,7 @@ debug.keystore
 *.ipa
 
 #api keys
+firebase2
 firebase/firebaseConfig.ts
 firebase/GoogleService-Info.plist
 firebase/google-services.json
