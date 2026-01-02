@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/adaptive-icon.png",
+      "image": "./assets/adaptive-icon2.png",
       "resizeMode": "contain",
       "backgroundColor": "#950D0D"
     },
@@ -24,7 +24,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive-icon2.png",
         "backgroundColor": "#950D0D"
       },
       "package": "movies.database",
@@ -44,7 +44,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#950D0D",
-          "image": "./assets/adaptive-icon.png",
+          "image": "./assets/adaptive-icon2.png",
           "imageWidth": 200
         }
       ],

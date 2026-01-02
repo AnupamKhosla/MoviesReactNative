@@ -18,6 +18,9 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 import { AntDesign, FontAwesome } from '@expo/vector-icons'; 
 
 
+
+const PLACEHOLDER_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mN8+R8AAnkB9X9086gAAAAASUVORK5CYII=';
+
 const THEME = {
   background: '#2b0505',
   card: '#7e1111ff',       
@@ -45,13 +48,15 @@ export default function AuthScreen() {
 
   const checkCurrentSignedInUser = async () => {
     try {
-      const isSignedIn = await GoogleSignin.isSignedIn();
-      if (isSignedIn) {
-        const currentUser = await GoogleSignin.getCurrentUser();
-        setUserInfo(currentUser);
+      const userInfo = await GoogleSignin.signInSilently();
+      // Success! User is signed in.
+      setUserInfo(userInfo); 
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_REQUIRED) {
+        // User is NOT signed in. This is normal for a fresh install.
+      } else {
+        // Some other actual error happened (network, etc.)
       }
-    } catch (error) {
-      // Squelch error
     }
   };
 
@@ -88,7 +93,7 @@ export default function AuthScreen() {
         <View style={styles.centerContent}>
           <View style={styles.profileCard}>
             <Image 
-              source={{ uri: user.photo?.replace('s96-c', 's400-c') || 'https://via.placeholder.com/150' }} 
+              source={{ uri: user.photo?.replace('s96-c', 's400-c') || PLACEHOLDER_IMAGE }} 
               style={styles.profileImage} 
             />
             <Text style={styles.welcomeText}>Welcome</Text>
@@ -180,7 +185,7 @@ export default function AuthScreen() {
           {/* Social Icons (Compact) */}
           <View style={styles.socialRow}>
             <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin}>
-              <AntDesign name="google" size={24} color="#fff" />
+              <AntDesign name="google" size={24} color="#EA4335" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.socialIconBtn} onPress={() => {}}>
@@ -188,7 +193,7 @@ export default function AuthScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.socialIconBtn} onPress={() => {}}>
-              <FontAwesome name="facebook" size={24} color="#fff" />
+              <FontAwesome name="facebook" size={24} color="#1877F2" />
             </TouchableOpacity>
           </View>
 
@@ -206,7 +211,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 10, 
+    paddingVertical: 0, 
     justifyContent: 'center' 
   },
   centerContent: {
@@ -244,7 +249,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: THEME.accent,
     marginBottom: 4,
@@ -284,7 +289,7 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     color: THEME.subText,
-    fontSize: 13,
+    fontSize: 16,
   },
   toggleHighlight: {
     color: THEME.accent,
@@ -300,11 +305,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: THEME.border,
+    backgroundColor: THEME.background,
   },
   dividerText: {
     marginHorizontal: 16,
-    color: '#666',
+    color: THEME.subText,
     fontWeight: 'bold',
     fontSize: 12,
   },

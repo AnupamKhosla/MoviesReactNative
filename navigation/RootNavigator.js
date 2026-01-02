@@ -94,6 +94,7 @@ const tabBarOptions = {
     backgroundColor: '#7F0000',
     borderColor: 'white',
     borderTopWidth: 0,
+    paddingHorizontal: 20,
   },
   headerStyle: {
     backgroundColor: 'green',
