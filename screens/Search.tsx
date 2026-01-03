@@ -15,8 +15,8 @@ import {getMovies, addFavorite, removeFavorite, searchMovies} from '../redux/act
 
 export default function Search() {
   const [query, setQuery] = React.useState('Avengers');
-  const {searchResults, favorites} = useSelector(state => state.moviesReducer);
-  const { initialLoading, error } = useSelector(state => state.moviesReducer);
+  const {searchResults, favorites} = useSelector(state => state.movies);
+  const { initialLoading, error } = useSelector(state => state.movies);
 
   const dispatch = useDispatch();
   const fetchSearch = (query) => dispatch(searchMovies(query));

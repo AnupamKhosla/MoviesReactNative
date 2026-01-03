@@ -1,21 +1,17 @@
-import React from 'react';
-import { Platform, useColorScheme } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux'; // <--- 1. Import Hooks
 import {
   NavigationContainer,
+  useNavigationContainerRef,
+  useNavigation,
   DefaultTheme,
   DarkTheme,
 } from '@react-navigation/native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
-
-
-
-
-import {LinearGradient} from 'expo-linear-gradient';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons'; 
+import { LinearGradient } from 'expo-linear-gradient';
 import { useHeaderHeight } from '@react-navigation/elements';
-
-
 
 // import screens
 import BooksList from '../screens/Movies.js';
@@ -23,32 +19,36 @@ import Favorites from '../screens/Favourites.js';
 import Search    from '../screens/Search';
 import Auth      from '../screens/Auth';
 
+// import Auth Logic
+import { GoogleSignin } from '@react-native-google-signin/google-signin'; 
+import { checkAppLaunchStatus, closeAuthModal } from '../redux/authActions'; 
+import GlobalAuthModal from '../components/GlobalAuthModal'; 
+import { COLORS, GRADIENTS } from '../constants/theme'; // <--- Theme Imports
+
 const MyTheme = {
   dark: true,
   colors: {
     primary: 'white',
-    background: '#7A0000',
+    background: COLORS.primary, // Use Global Red
     card: 'white',
     text: 'white',
     border: 'rgb(199, 199, 204)',
-    notification: 'rgb(255, 69, 58)',
+    notification: COLORS.error,
   },
 };
 
-
 const ScreenTemplate = ({ children, headerPadding }) => {
-
   const headerHeight = useHeaderHeight();  
   return (
     <LinearGradient 
-      colors={['#360000', '#7A0000']}
-      //colors={['#5A0003', '#360000', '#7A0000']}
+      colors={GRADIENTS.mainBackground}   // New Global Gradient
       style={{ flex: 1, paddingTop: headerPadding ? headerHeight : 0 }}
     >
       {children}
     </LinearGradient>
   )
 }
+
 const ScreenOne = () => {
   return (
     <ScreenTemplate headerPadding>
@@ -81,15 +81,13 @@ const ScreenFour = () => {
   )
 }
 
-
 const Tab = createBottomTabNavigator();
 const tabBarOptions = {
   tabBarShowLabel: false,
-  tabBarActiveTintColor: 'rgba(235, 204, 204, 1)',
+  tabBarActiveTintColor: COLORS.accent, // Gold
   tabBarInactiveTintColor: 'rgba(235, 204, 204, 0.4)',
   tabBarStyle: {
-    //platofrm
-    height: Platform.OS === 'ios' ? 60 : 100,
+    height: Platform.OS === 'ios' ? 60 : 70, 
     ...(Platform.OS === 'ios' && { paddingBottom: 0 }),
     backgroundColor: '#7F0000',
     borderColor: 'white',
@@ -101,13 +99,57 @@ const tabBarOptions = {
   },
   headerTransparent: true
 };
-const RootNavigator = () => {
+
+const RootNavigator = () => {  
+  const dispatch = useDispatch();
   
-  return (
-    
-    <NavigationContainer theme={MyTheme}>
-      <Tab.Navigator screenOptions={tabBarOptions}>
-          
+  // We need 'user' state to decide logic in onStateChange
+  const { user } = useSelector(state => state.auth); 
+  const navigationRef = useNavigationContainerRef();
+  // Track the previous route name
+  const routeNameRef = useRef();
+
+  // 1. App Launch Check
+  useEffect(() => {    
+    dispatch(checkAppLaunchStatus());
+  }, [dispatch]);
+
+  return (    
+    <NavigationContainer 
+      theme={MyTheme}
+      ref={navigationRef}
+      // 2. Initialize the Ref when nav is ready
+      onReady={() => {
+        routeNameRef.current = navigationRef.current.getCurrentRoute().name;
+      }}
+
+      // 3. CENTRAL LOGIC: Handle Screen Changes
+      onStateChange={(state) => {
+        const previousRouteName = routeNameRef.current;
+        // Get the current active tab name
+        const currentRouteName = state.routes[state.index].name;
+
+        // LOGIC A: If entering Auth screen -> HIDE Modal immediately
+        if (currentRouteName === 'Auth') {
+           dispatch(closeAuthModal());
+        }
+
+        // LOGIC B: If leaving Auth screen -> SHOW Modal (if still guest)
+        if (previousRouteName === 'Auth' && currentRouteName !== 'Auth') {
+           if (!user) {
+             // Nudge them to login if they leave without signing in
+             dispatch({ type: 'SHOW_MODAL', payload: 'LOGIN_OPTIONS' });
+           }
+        }
+
+        // Save current route for next comparison
+        routeNameRef.current = currentRouteName;
+      }}
+    >
+      
+      <GlobalAuthModal />
+
+      <Tab.Navigator screenOptions={tabBarOptions}>          
             <Tab.Screen
               name="Search"
               component={ScreenOne}
@@ -116,8 +158,7 @@ const RootNavigator = () => {
                   <Ionicons name="search-outline" color={color} size={size} />    
                 ), 
               }}
-            />
-        
+            />        
             <Tab.Screen
               name="Movies"
               component={ScreenTwo}
@@ -146,11 +187,9 @@ const RootNavigator = () => {
                 ),
               }}
             />
-         
-       
       </Tab.Navigator>    
-    </NavigationContainer>
-    
+    </NavigationContainer>    
   );
 };
+
 export default RootNavigator;

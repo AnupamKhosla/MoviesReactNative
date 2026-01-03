@@ -8,8 +8,8 @@ import { getMovies, addFavorite, removeFavorite } from '../redux/actions';
 
 
 const BooksList = () => {
-  const {movies, favorites} = useSelector(state => state.moviesReducer);
-  const { initialLoading, error } = useSelector(state => state.moviesReducer);
+  const {movies, favorites} = useSelector(state => state.movies);
+  const { initialLoading, error } = useSelector(state => state.movies);
 
   const dispatch = useDispatch();
   const fetchMovies = () => dispatch(getMovies());

@@ -8,7 +8,7 @@ import {removeFavorite} from '../redux/actions';
 
 
 const Favorites = () => {
-  const {favorites} = useSelector(state => state.moviesReducer);
+  const {favorites} = useSelector(state => state.movies);
   const dispatch = useDispatch();
   const removeFromFavorites = movie => dispatch(removeFavorite(movie));
   const handleRemoveFavorite = movie => {
