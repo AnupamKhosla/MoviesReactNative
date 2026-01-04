@@ -8,10 +8,11 @@ import {
 } from './authActions';
 
 const initialState = {
-  user: null,           // The Firebase User Object
-  isGuest: true,        // Are they strictly a guest?
-  showModal: false,     // Is the popup visible?
-  modalType: 'LOGIN_OPTIONS', // 'LOGIN_OPTIONS' | 'WELCOME'
+  user: null,           
+  isGuest: true,        
+  isLoading: true,      // <--- ADDED: Blocks UI until Init finishes
+  showModal: false,     
+  modalType: 'LOGIN_OPTIONS', 
   error: null,
 };
 
@@ -20,17 +21,20 @@ export default function authReducer(state = initialState, action: any) {
     case LOGIN_SUCCESS:
       return {
         ...state,
-        user: action.payload,
+        user: action.payload, // Contains { displayName, photoURL, ... }
         isGuest: false,
+        isLoading: false,     // Loading done
         error: null,
-        // We don't close modal here immediately; we let the UI show "Welcome" first
       };
 
     case SHOW_MODAL:
       return {
         ...state,
         showModal: true,
-        modalType: action.payload, // 'WELCOME' or 'LOGIN_OPTIONS'
+        // Handle both object payload {type: 'WELCOME'} and string payload 'WELCOME'
+        modalType: action.payload.type || action.payload,
+        // If showing login options, we know loading is done
+        isLoading: action.payload.type === 'LOGIN_OPTIONS' ? false : state.isLoading
       };
 
     case CLOSE_MODAL:
@@ -39,26 +43,17 @@ export default function authReducer(state = initialState, action: any) {
         showModal: false,
       };
 
-    case SET_GUEST:
-      return {
-        ...state,
-        isGuest: true,
-        showModal: false, // Close immediately for guest
-      };
-      
     case LOGOUT_SUCCESS:
       return {
         ...initialState,
-        // Optional: Open modal again after logout?
-        // showModal: true, 
-        // modalType: 'LOGIN_OPTIONS'
+        isLoading: false, // Reset but don't hang on loading
       };
 
     case LOGIN_FAILURE:
       return {
         ...state,
         error: action.payload,
-        // Keep modal open so they can retry
+        isLoading: false,
       };
 
     default:

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -11,91 +11,73 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  Dimensions
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { useSelector, useDispatch } from 'react-redux';
 import { AntDesign, FontAwesome } from '@expo/vector-icons'; 
 
+import { 
+  startManualGoogleLogin, 
+  startFacebookLogin, 
+  startAppleLogin, 
+  logoutUser,
+  clearAuthError // Import the clear action
+} from '../redux/authActions';
+import { THEME } from '../constants/theme';
 
-
+// ... (THEME and PLACEHOLDER_IMAGE remain exactly as they were) ...
 const PLACEHOLDER_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mN8+R8AAnkB9X9086gAAAAASUVORK5CYII=';
 
-const THEME = {
-  background: '#2b0505',
-  card: '#7e1111ff',       
-  text: '#ffffff',       
-  subText: '#d1d5db',   
-  accent: '#FFD700',
-  inputBg: 'rgba(0, 0, 0, 0.3)',
-  border: '#5c1414',
-};
+
 
 export default function AuthScreen() {
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const dispatch = useDispatch<any>();
+  // 1. Get ERROR from state
+  const { user, isLoading, error } = useSelector((state: any) => state.auth);
+
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  useEffect(() => {    
-    checkCurrentSignedInUser();
-  }, []);
-
-  const checkCurrentSignedInUser = async () => {
-    try {
-      const userInfo = await GoogleSignin.signInSilently();
-      // Success! User is signed in.
-      setUserInfo(userInfo); 
-    } catch (error: any) {
-      if (error.code === statusCodes.SIGN_IN_REQUIRED) {
-        // User is NOT signed in. This is normal for a fresh install.
-      } else {
-        // Some other actual error happened (network, etc.)
-      }
+  // 2. ERROR LISTENER: Show Alert if login fails
+  useEffect(() => {
+    if (error) {
+      Alert.alert(
+        "Authentication Failed",
+        error,
+        [{ text: "OK", onPress: () => dispatch(clearAuthError()) }]
+      );
     }
-  };
+  }, [error, dispatch]);
 
-  const handleGoogleLogin = async () => {
-    try {
-      await GoogleSignin.hasPlayServices();
-      const response = await GoogleSignin.signIn();
-      if (response && response.data) {
-        setUserInfo(response); 
-      }
-    } catch (error: any) {
-      if (error.code !== statusCodes.SIGN_IN_CANCELLED) {
-        Alert.alert("Error", error.message);
-      }
-    }
-  };
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color={THEME.accent} />
+      </View>
+    );
+  }
 
-  const handleLogout = async () => {
-    try {
-      await GoogleSignin.signOut();
-      setUserInfo(null);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  // --- RENDER: LOGGED IN PROFILE ---
-  const user = userInfo?.data?.user || userInfo?.user;
-
-  if (userInfo && user) {
+  // 3. LOGGED IN VIEW
+  if (user) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor={THEME.background} />
+        <StatusBar barStyle="light-content" />
         <View style={styles.centerContent}>
           <View style={styles.profileCard}>
             <Image 
-              source={{ uri: user.photo?.replace('s96-c', 's400-c') || PLACEHOLDER_IMAGE }} 
+              source={{ uri: user.photoURL?.replace('s96-c', 's400-c') || PLACEHOLDER_IMAGE }} 
               style={styles.profileImage} 
             />
             <Text style={styles.welcomeText}>Welcome</Text>
-            <Text style={styles.userName}>{user.name}</Text>
+            <Text style={styles.userName}>{user.displayName || 'User'}</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
             
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <TouchableOpacity 
+              style={styles.logoutBtn} 
+              onPress={() => dispatch(logoutUser())}
+            >
               <Text style={styles.logoutText}>Sign Out</Text>
             </TouchableOpacity>
           </View>
@@ -104,10 +86,10 @@ export default function AuthScreen() {
     );
   }
 
-  // --- RENDER: AUTH FORM ---
+  // 4. GUEST / FORM VIEW
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={THEME.background} />
+      <StatusBar barStyle="light-content" />
       
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -117,18 +99,13 @@ export default function AuthScreen() {
           contentContainerStyle={styles.scrollContainer} 
           showsVerticalScrollIndicator={false}
         >
-          
-          {/* Header Section (Compact) */}
-         
+          {/* Header */}
           <View style={styles.headerContainer}>
             <Image source={require('../assets/watching-tv.png')} style={styles.logoImage} />
-            
-
             <Text style={styles.headerTitle}>MOVIES DB</Text>
-            {/* ... rest of code */}
           </View>
 
-          {/* Input Fields (Compact) */}
+          {/* Input Fields */}
           <View style={styles.formContainer}>
             <Text style={styles.label}>EMAIL</Text>
             <TextInput 
@@ -151,7 +128,7 @@ export default function AuthScreen() {
               onChangeText={setPassword}
             />
 
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => Alert.alert("TODO", "Custom Auth")}>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => Alert.alert("Use Google Sign-In for now")}>
               <Text style={styles.primaryBtnText}>
                 {isLoginMode ? "LOG IN" : "SIGN UP"}
               </Text>
@@ -170,26 +147,35 @@ export default function AuthScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Divider (Compact) */}
+          {/* Divider */}
           <View style={styles.dividerContainer}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>OR</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Social Icons (Compact) */}
+          {/* Social Icons */}
           <View style={styles.socialRow}>
-            <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin}>
+            <TouchableOpacity 
+              style={styles.socialIconBtn} 
+              onPress={() => dispatch(startManualGoogleLogin())}
+            >
               <AntDesign name="google" size={24} color="#EA4335" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.socialIconBtn} onPress={() => {}}>
+            {/* <TouchableOpacity 
+              style={styles.socialIconBtn} 
+              onPress={() => dispatch(startAppleLogin())}
+            >
               <FontAwesome name="apple" size={24} color="#fff" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
-            <TouchableOpacity style={styles.socialIconBtn} onPress={() => {}}>
+            {/* <TouchableOpacity 
+              style={styles.socialIconBtn} 
+              onPress={() => dispatch(startFacebookLogin())}
+            >
               <FontAwesome name="facebook" size={24} color="#1877F2" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
         </ScrollView>
@@ -200,31 +186,25 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    //backgroundColor: THEME.background,
+    flex: 1,  
   },
   scrollContainer: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 0, 
-    justifyContent: 'center' 
+    justifyContent: 'center',
   },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  // Header
   headerContainer: {
     alignItems: 'center',
     marginBottom: 20,
   },
   logoImage: {
-    // Compact size
     width: 70,
     height: 70,
-    // tintColor removed here
     marginBottom: 15,
   },
   headerTitle: {
@@ -233,13 +213,6 @@ const styles = StyleSheet.create({
     color: THEME.text,
     letterSpacing: 2,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: THEME.subText,
-    marginTop: 2,
-  },
-
-  // Form
   formContainer: {
     width: '100%',
   },
@@ -260,8 +233,6 @@ const styles = StyleSheet.create({
     color: THEME.text,
     marginBottom: 12,
   },
-  
-  // Buttons
   primaryBtn: {
     backgroundColor: THEME.accent,
     borderRadius: 8,
@@ -275,8 +246,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
-
-  // Toggle
   toggleContainer: {
     marginTop: 15,
     alignItems: 'center',
@@ -290,8 +259,6 @@ const styles = StyleSheet.create({
     color: THEME.accent,
     fontWeight: 'bold',
   },
-
-  // Divider
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -300,7 +267,7 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: THEME.background,
+    backgroundColor: THEME.border,
   },
   dividerText: {
     marginHorizontal: 16,
@@ -308,8 +275,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 12,
   },
-
-  // Social
   socialRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -326,8 +291,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
-
-  // Profile Card
   profileCard: {
     backgroundColor: THEME.card,
     width: '90%',
@@ -369,7 +332,7 @@ const styles = StyleSheet.create({
     borderColor: '#ef4444',
   },
   logoutText: {
-    color: '#ffe4e6', 
+    color: '#ffe4e6',
     fontWeight: 'bold',
     fontSize: 16,
   },

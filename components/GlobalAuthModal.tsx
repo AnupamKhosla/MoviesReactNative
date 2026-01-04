@@ -2,17 +2,18 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, Easing } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons'; // <--- Imported Icon
+import { Ionicons } from '@expo/vector-icons'; 
 import { closeAuthModal } from '../redux/authActions';
 import { COLORS, GRADIENTS } from '../constants/theme';
 
 export default function GlobalAuthModal() {
   const dispatch = useDispatch<any>();
   const navigation = useNavigation<any>();
+  
+  // Select Auth State
   const { showModal, modalType, user } = useSelector((state: any) => state.auth);
   
-  // 1. NEW: Watch the current screen name
-  // If the user navigates to "Auth" tab manually, we must hide this popup
+  // Watch current screen to auto-hide if on Auth screen
   const currentRouteName = useNavigationState(state => 
     state ? state.routes[state.index].name : undefined
   );
@@ -20,13 +21,14 @@ export default function GlobalAuthModal() {
   const slideAnim = useRef(new Animated.Value(100)).current; 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // 2. Logic to Auto-Close on Auth Screen
+  // Auto-close if user manually navigates to Auth screen
   useEffect(() => {
     if (showModal && currentRouteName === 'Auth') {
       handleClose();
     }
   }, [currentRouteName, showModal]);
 
+  // Animation & Timer Logic
   useEffect(() => {
     if (showModal) {
       Animated.parallel([
@@ -43,11 +45,13 @@ export default function GlobalAuthModal() {
         }),
       ]).start();
 
+      // Auto-hide Welcome message
       if (modalType === 'WELCOME') {
         const timer = setTimeout(() => handleClose(), 3000);
         return () => clearTimeout(timer);
       }
     } else {
+      // Reset values when hidden
       slideAnim.setValue(100); 
       fadeAnim.setValue(0);
     }
@@ -95,12 +99,11 @@ export default function GlobalAuthModal() {
               style={styles.miniAvatar} 
             />
             <Text style={styles.text}>
-              Welcome back, <Text style={styles.bold}>{user?.displayName?.split(' ')[0]}</Text>
+              Welcome back, <Text style={styles.bold}>{user?.displayName?.split(' ')[0] || 'User'}</Text>
             </Text>
           </View>
         ) : (
           <View style={styles.row}>
-            {/* Flex 1 ensures text takes available space */}
             <Text style={[styles.text, { flex: 1 }]}>
               Sync your watchlist
             </Text>
@@ -108,19 +111,11 @@ export default function GlobalAuthModal() {
             <TouchableOpacity 
               style={styles.signInBtn} 
               onPress={handleSignInPress}
-              accessibilityRole="button"
-              accessibilityLabel="Sign in to sync your movies"
             >
               <Text style={styles.signInText}>SIGN IN</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              onPress={handleClose} 
-              style={styles.closeX}
-              accessibilityRole="button"
-              accessibilityLabel="Close notification"
-            >
-              {/* FIXED: Replaced Text X with a clean Icon */}
+            <TouchableOpacity onPress={handleClose} style={styles.closeX}>
               <Ionicons name="close" size={20} color={COLORS.textPrimary} />
             </TouchableOpacity>
           </View>
@@ -150,17 +145,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
-    
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 8,
+    flexDirection: 'row', 
+    alignItems: 'center',
   },
   row: { 
     flexDirection: 'row', 
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    width: '100%'
   },
   miniAvatar: { 
     width: 30, 
@@ -198,7 +195,6 @@ const styles = StyleSheet.create({
   closeX: { 
     padding: 10, 
     marginLeft: 4,
-    // Added alignment to ensure icon sits perfectly in the padding box
     justifyContent: 'center',
     alignItems: 'center',
   }

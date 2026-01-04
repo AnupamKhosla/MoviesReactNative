@@ -9,7 +9,7 @@ import {useSelector, useDispatch} from 'react-redux';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import {getMovies, addFavorite, removeFavorite, searchMovies} from '../redux/actions';
 
-
+import { THEME } from '../constants/theme';
 
 
 
@@ -48,7 +48,7 @@ export default function Search() {
   if (initialLoading) {
     return (
       <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={THEME.accent} />
       </View>
     );
   }

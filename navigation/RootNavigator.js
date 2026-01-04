@@ -25,6 +25,9 @@ import { checkAppLaunchStatus, closeAuthModal } from '../redux/authActions';
 import GlobalAuthModal from '../components/GlobalAuthModal'; 
 import { COLORS, GRADIENTS } from '../constants/theme'; // <--- Theme Imports
 
+
+
+
 const MyTheme = {
   dark: true,
   colors: {
@@ -48,7 +51,6 @@ const ScreenTemplate = ({ children, headerPadding }) => {
     </LinearGradient>
   )
 }
-
 const ScreenOne = () => {
   return (
     <ScreenTemplate headerPadding>
@@ -56,7 +58,6 @@ const ScreenOne = () => {
     </ScreenTemplate>
   )
 }
-
 const ScreenTwo = () => {
   return (
     <ScreenTemplate headerPadding>
@@ -64,7 +65,6 @@ const ScreenTwo = () => {
     </ScreenTemplate>
   )
 }
-
 const ScreenThree = () => {
   return (
     <ScreenTemplate headerPadding>
@@ -72,7 +72,6 @@ const ScreenThree = () => {
     </ScreenTemplate>
   )
 }
-
 const ScreenFour = () => {
   return (
     <ScreenTemplate headerPadding>
@@ -101,8 +100,7 @@ const tabBarOptions = {
 };
 
 const RootNavigator = () => {  
-  const dispatch = useDispatch();
-  
+  const dispatch = useDispatch();  
   // We need 'user' state to decide logic in onStateChange
   const { user } = useSelector(state => state.auth); 
   const navigationRef = useNavigationContainerRef();
@@ -111,7 +109,7 @@ const RootNavigator = () => {
 
   // 1. App Launch Check
   useEffect(() => {    
-    dispatch(checkAppLaunchStatus());
+    
   }, [dispatch]);
 
   return (    

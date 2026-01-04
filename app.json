@@ -20,7 +20,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "googleServicesFile": "./firebase/GoogleService-Info.plist"
+      "googleServicesFile": "./firebase/GoogleService-Info.plist",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -54,6 +55,7 @@
           "iosUrlScheme": "com.googleusercontent.apps.667258439454-uaqhtvo679k7lt2sod0et7hmu2tajm8f"
         }
       ],
+      
       "expo-web-browser"
     ],
     "owner": "user31782"

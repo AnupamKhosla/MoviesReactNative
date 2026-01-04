@@ -5,7 +5,7 @@ import {View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndic
 import {useSelector, useDispatch} from 'react-redux';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { getMovies, addFavorite, removeFavorite } from '../redux/actions';
-
+import { THEME } from '../constants/theme';
 
 const BooksList = () => {
   const {movies, favorites} = useSelector(state => state.movies);
@@ -37,7 +37,7 @@ const BooksList = () => {
   if (initialLoading) {
     return (
       <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={THEME.accent} />
       </View>
     );
   }

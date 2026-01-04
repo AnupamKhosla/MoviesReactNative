@@ -96,7 +96,7 @@ export const getMovies = (tries = 0) => {
       } else {
         dispatch({
           type: GET_MOVIES_ERROR,
-          payload: "Popular movies failed after 3 retries",
+          payload: "Popular movies failed after retry",
         });
       }
     }
@@ -160,7 +160,7 @@ export const searchMovies = (query, tries = 0) => {
       } else {
         dispatch({
           type: SEARCH_MOVIES_ERROR,
-          payload: "Search failed after 3 retries",
+          payload: "Search failed after retry",
         });
       }
     }

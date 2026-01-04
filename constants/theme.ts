@@ -32,3 +32,13 @@ export const GRADIENTS = {
   middle: '#9a0000ff',
   mainBackground: ['#360000', '#7A0000'],
 };
+export const THEME = {
+  background: '#2b0505',
+  card: '#7e1111ff',       
+  text: '#ffffff',       
+  subText: '#d1d5db',   
+  accent: '#FFD700',
+  inputBg: 'rgba(0, 0, 0, 0.3)',
+  border: '#5c1414',
+};
+
