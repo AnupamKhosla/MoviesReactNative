@@ -40,5 +40,6 @@ export const THEME = {
   accent: '#FFD700',
   inputBg: 'rgba(0, 0, 0, 0.3)',
   border: '#5c1414',
+  navbar: '#7F0000' // slightly darker than gradient end
 };
 

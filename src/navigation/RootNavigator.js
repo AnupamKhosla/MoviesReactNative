@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux'; // <--- 1. Import Hooks
 import {
@@ -9,6 +9,7 @@ import {
   DarkTheme,
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useBottomNavPadding } from '../hooks/useBottomNavPadding';//Android bottom syetem buttons issue
 import { Ionicons } from '@expo/vector-icons'; 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -23,7 +24,7 @@ import Auth      from '../screens/Auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin'; 
 import { checkAppLaunchStatus, closeAuthModal } from '../redux/authActions'; 
 import GlobalAuthModal from '../components/GlobalAuthModal'; 
-import { COLORS, GRADIENTS } from '../constants/theme'; // <--- Theme Imports
+import { COLORS, GRADIENTS, THEME } from '../constants/theme'; // <--- Theme Imports
 
 
 
@@ -81,36 +82,34 @@ const ScreenFour = () => {
 }
 
 const Tab = createBottomTabNavigator();
-const tabBarOptions = {
-  tabBarShowLabel: false,
-  tabBarActiveTintColor: COLORS.accent, // Gold
-  tabBarInactiveTintColor: 'rgba(235, 204, 204, 0.4)',
-  tabBarStyle: {
-    height: Platform.OS === 'ios' ? 60 : 70, 
-    ...(Platform.OS === 'ios' && { paddingBottom: 0 }),
-    backgroundColor: '#7F0000',
-    borderColor: 'white',
-    borderTopWidth: 0,
-    paddingHorizontal: 20,
-  },
-  headerStyle: {
-    backgroundColor: 'green',
-  },
-  headerTransparent: true
-};
+
 
 const RootNavigator = () => {  
+  const bottomPadding = useBottomNavPadding();
+  // 3. APPLY STYLES
+  const tabBarOptions = {
+    tabBarShowLabel: false,
+    tabBarActiveTintColor: COLORS.accent, // Gold
+    tabBarInactiveTintColor: 'rgba(235, 204, 204, 0.4)',
+    tabBarStyle: {
+      // Height = Standard Tab Height (60) + The Dynamic Padding
+      height: 60 + bottomPadding,
+      paddingBottom: bottomPadding,
+
+      backgroundColor: THEME.navbar, 
+      borderColor: 'white',
+      borderTopWidth: 0,
+      paddingHorizontal: 20,
+    },
+    headerTransparent: true,
+  };
   const dispatch = useDispatch();  
   // We need 'user' state to decide logic in onStateChange
   const { user } = useSelector(state => state.auth); 
   const navigationRef = useNavigationContainerRef();
-  // Track the previous route name
+  // Track the previous route name for SIgn In modal logic
   const routeNameRef = useRef();
 
-  // 1. App Launch Check
-  useEffect(() => {    
-    
-  }, [dispatch]);
 
   return (    
     <NavigationContainer 
@@ -185,6 +184,7 @@ const RootNavigator = () => {
                 ),
               }}
             />
+           
       </Tab.Navigator>    
     </NavigationContainer>    
   );

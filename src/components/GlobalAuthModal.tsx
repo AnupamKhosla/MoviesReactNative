@@ -3,15 +3,21 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, Easing } fro
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons'; 
+
+// --- 1. Import Hook ---
+import { useBottomNavPadding } from '../hooks/useBottomNavPadding';
 import { closeAuthModal } from '../redux/authActions';
 import { COLORS, GRADIENTS } from '../constants/theme';
 
 export default function GlobalAuthModal() {
-  const dispatch = useDispatch<any>();
-  const navigation = useNavigation<any>();
+  const dispatch = useDispatch();
+  const navigation = useNavigation();
   
+  // --- 2. Get Dynamic Padding ---
+  const bottomPadding = useBottomNavPadding();
+
   // Select Auth State
-  const { showModal, modalType, user } = useSelector((state: any) => state.auth);
+  const { showModal, modalType, user } = useSelector((state) => state.auth);
   
   // Watch current screen to auto-hide if on Auth screen
   const currentRouteName = useNavigationState(state => 
@@ -45,13 +51,11 @@ export default function GlobalAuthModal() {
         }),
       ]).start();
 
-      // Auto-hide Welcome message
       if (modalType === 'WELCOME') {
         const timer = setTimeout(() => handleClose(), 3000);
         return () => clearTimeout(timer);
       }
     } else {
-      // Reset values when hidden
       slideAnim.setValue(100); 
       fadeAnim.setValue(0);
     }
@@ -81,8 +85,19 @@ export default function GlobalAuthModal() {
 
   if (!showModal) return null;
 
+  // --- 3. Dynamic Calculation ---
+  // We want the modal to sit ABOVE the tab bar.
+  // Tab Bar Height is typically 60 + bottomPadding.
+  // We add 20px extra margin for spacing.
+  const dynamicBottomPosition = 60 + bottomPadding + 20;
+
   return (
-    <View style={styles.container}>
+    <View 
+      style={[
+        styles.container, 
+        { bottom: dynamicBottomPosition } // <--- Apply Dynamic Height Here
+      ]}
+    >
       <Animated.View 
         style={[
           styles.toast, 
@@ -128,7 +143,7 @@ export default function GlobalAuthModal() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 90, 
+    // bottom: 130,  <--- REMOVED (Handled dynamically in render)
     left: 0,
     right: 0,
     alignItems: 'center',
