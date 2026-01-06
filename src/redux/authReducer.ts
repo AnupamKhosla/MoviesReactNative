@@ -4,7 +4,9 @@ import {
   SET_GUEST, 
   SHOW_MODAL, 
   CLOSE_MODAL, 
-  LOGOUT_SUCCESS 
+  LOGOUT_SUCCESS, 
+  LOADING_START,
+  LOADING_END
 } from './authActions';
 
 const initialState = {
@@ -18,6 +20,20 @@ const initialState = {
 
 export default function authReducer(state = initialState, action: any) {
   switch (action.type) {
+    case LOADING_START:
+      return {
+        ...state,
+        isLoading: true,
+        error: null, // Clear previous errors when starting new attempt
+      };
+
+    case LOADING_END:
+      return {
+        ...state,
+        isLoading: false,
+      };
+
+
     case LOGIN_SUCCESS:
       return {
         ...state,

@@ -40,6 +40,9 @@ export const THEME = {
   accent: '#FFD700',
   inputBg: 'rgba(0, 0, 0, 0.3)',
   border: '#5c1414',
-  navbar: '#7F0000' // slightly darker than gradient end
+  navbar: '#7F0000', // slightly darker than gradient end
+  danger: '#FF6B6B',
+  btnBorder: '#ac1919ff',
+  googleColor: '#EA4335',
 };
 

@@ -16,6 +16,7 @@ import {
 // import { LoginManager, AccessToken, Settings } from 'react-native-fbsdk-next';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { firebaseAuth } from '../firebase/firebaseConfig';
+import { Alert } from 'react-native'; // testing prod
 
 // --- TYPES ---
 export const LOGIN_SUCCESS = 'LOGIN_SUCCESS';
@@ -24,6 +25,8 @@ export const CLEAR_ERROR = 'CLEAR_ERROR'; // New action to clear error after sho
 export const SHOW_MODAL = 'SHOW_MODAL';
 export const CLOSE_MODAL = 'CLOSE_MODAL';
 export const LOGOUT_SUCCESS = 'LOGOUT_SUCCESS';
+export const LOADING_START = 'LOADING_START';
+export const LOADING_END = 'LOADING_END';
 
 export interface UserProfile {
   uid: string;
@@ -97,36 +100,49 @@ export const initAuth = () => {
 
 // --- GOOGLE LOGIN ---
 export const startManualGoogleLogin = () => async (dispatch: Dispatch<any>) => {
+  dispatch({ type: 'LOADING_START' });
   try {
     await GoogleSignin.hasPlayServices();
     const response = await GoogleSignin.signIn();
+    if (response.type === 'cancelled' || !response.data?.idToken) {
+       dispatch({ 
+         type: 'LOGIN_FAILURE', 
+         payload: 'Login Cancelled' // Or use specific 'LOGIN_CANCELLED' type if you want to suppress the Alert
+       });
+       return;
+    }
     
     if (isSuccessResponse(response) && response.data?.idToken) {
       
       const credential = GoogleAuthProvider.credential(response.data.idToken);
       const firebaseResult = await signInWithCredential(firebaseAuth, credential);
-      
+      //  DEBUG ALERT: Check if we actually got here
+      Alert.alert(
+        "Prod Debug: Login Success",
+        `Email: ${firebaseResult.user.email}\nName: ${firebaseResult.user.displayName}\nUID: ${firebaseResult.user.uid}`
+      );
+
       dispatch({ 
         type: LOGIN_SUCCESS, 
         payload: mapFirebaseUser(firebaseResult.user) 
       });
-      dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
+      //dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
+      //test bevcause this hides anyway after login
     }
   } catch (error: any) {
     let friendlyMessage = 'Google Login Failed';
-    
-    // Handle "Bad Config" or "Developer Error" specifically
-    if (error.code === statusCodes.DEVELOPER_ERROR) {
-      friendlyMessage = "Configuration Error: Google Sign-In is not set up correctly. Please contact support.";
-    } else if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-      return; // Ignore cancellation
-    } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+    if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+      dispatch({ type: 'LOADING_END' }); // Stop spinner silently
+      return; // specific return so we don't show an error alert
+    } 
+    else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
       friendlyMessage = "Google Play Services are not available on this device.";
-    } else if (error.message) {
+    } 
+    // 3. Fallback for everything else (Configuration errors, Network, etc.)
+    else if (error.message) {
       friendlyMessage = error.message;
     }
-
-    dispatch({ type: LOGIN_FAILURE, payload: friendlyMessage });
+    dispatch({ type: 'LOGIN_FAILURE', payload: friendlyMessage });
   }
 };
 

@@ -51,13 +51,6 @@ export default function AuthScreen() {
     }
   }, [error, dispatch]);
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color={THEME.accent} />
-      </View>
-    );
-  }
 
   // 3. LOGGED IN VIEW
   if (user) {
@@ -157,10 +150,22 @@ export default function AuthScreen() {
           {/* Social Icons */}
           <View style={styles.socialRow}>
             <TouchableOpacity 
-              style={styles.socialIconBtn} 
+              style={[
+                styles.socialIconBtn,
+                // Optional: Add a red border while spinning to show it's active
+                isLoading && { borderColor: THEME.googleColor, borderWidth: 2 } 
+              ]} 
               onPress={() => dispatch(startManualGoogleLogin())}
+              // Important: Prevent double-clicks
+              disabled={isLoading}
             >
-              <AntDesign name="google" size={24} color="#EA4335" />
+              {isLoading ? (
+                // SHOW SPINNER
+                <ActivityIndicator size="small" color={THEME.googleColor} />
+              ) : (
+                // SHOW GOOGLE ICON
+                <AntDesign name="google" size={32} color={THEME.googleColor} />
+              )}
             </TouchableOpacity>
 
             {/* <TouchableOpacity 
@@ -282,9 +287,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   socialIconBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 64,
+    height: 64,
+    borderRadius: 100,
     backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -328,8 +333,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 40,
     borderRadius: 30,
-    borderWidth: 1,
-    borderColor: '#ef4444',
+    borderWidth: 2,
+    borderColor: THEME.btnBorder,
   },
   logoutText: {
     color: '#ffe4e6',
