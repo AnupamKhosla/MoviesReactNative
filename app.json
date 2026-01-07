@@ -30,7 +30,10 @@
       },
       "package": "movies.database",
       "googleServicesFile": "./src/firebase/google-services.json",
-      "versionCode": 5
+      "permissions": [
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "versionCode": 7
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
@@ -45,7 +48,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#950D0D",
-          "image": "./assets/adaptive-icon2.png",
+          "image": "./src/assets/adaptive-icon2.png",
           "imageWidth": 200
         }
       ],
@@ -56,7 +59,8 @@
         }
       ],
       ["react-native-navigation-mode"],
-      "expo-web-browser"
+      "expo-web-browser",
+      ["expo-apple-authentication"]
     ],
     "owner": "user31782"
   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -19,28 +19,28 @@ import { AntDesign, FontAwesome } from '@expo/vector-icons';
 
 import { 
   startManualGoogleLogin, 
-  startFacebookLogin, 
   startAppleLogin, 
   logoutUser,
-  clearAuthError // Import the clear action
+  clearAuthError
 } from '../redux/authActions';
 import { THEME } from '../constants/theme';
-
-// ... (THEME and PLACEHOLDER_IMAGE remain exactly as they were) ...
-const PLACEHOLDER_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mN8+R8AAnkB9X9086gAAAAASUVORK5CYII=';
-
-
+import { SafeAvatar } from '../components/SafeAvatar';
 
 export default function AuthScreen() {
   const dispatch = useDispatch<any>();
-  // 1. Get ERROR from state
   const { user, isLoading, error } = useSelector((state: any) => state.auth);
+
+  const activeProviderRef = useRef<'google' | 'apple' | null>(null);
 
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // 2. ERROR LISTENER: Show Alert if login fails
+  // Auto-reset reference when loading finishes
+  if (!isLoading) {
+    activeProviderRef.current = null;
+  }
+
   useEffect(() => {
     if (error) {
       Alert.alert(
@@ -51,21 +51,48 @@ export default function AuthScreen() {
     }
   }, [error, dispatch]);
 
+  const getCleanData = () => {
+    if (!user) return null;
 
-  // 3. LOGGED IN VIEW
-  if (user) {
+    let cleanName = (user.displayName || "").replace(/null/gi, "").trim();
+    if (!cleanName) cleanName = "User";
+
+    let cleanEmail = (user.email || "").replace(/null/gi, "").trim();
+    if (!cleanEmail) cleanEmail = "Email Hidden";
+
+    const avatarUri = user.photoURL 
+      ? user.photoURL.replace('s96-c', 's400-c') 
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=random&color=fff&size=200`;
+
+    return { cleanName, cleanEmail, avatarUri };
+  };
+
+  const cleanData = getCleanData();
+
+  // Handlers without timeouts
+  const handleGooglePress = () => {
+    activeProviderRef.current = 'google';
+    dispatch(startManualGoogleLogin());
+  };
+
+  const handleApplePress = () => {
+    activeProviderRef.current = 'apple';
+    dispatch(startAppleLogin());
+  };
+
+  if (user && cleanData) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
         <View style={styles.centerContent}>
           <View style={styles.profileCard}>
-            <Image 
-              source={{ uri: user.photoURL?.replace('s96-c', 's400-c') || PLACEHOLDER_IMAGE }} 
+            <SafeAvatar 
+              uri={cleanData.avatarUri} 
               style={styles.profileImage} 
             />
             <Text style={styles.welcomeText}>Welcome</Text>
-            <Text style={styles.userName}>{user.displayName || 'User'}</Text>
-            <Text style={styles.userEmail}>{user.email}</Text>
+            <Text style={styles.userName}>{cleanData.cleanName}</Text>
+            <Text style={styles.userEmail}>{cleanData.cleanEmail}</Text>
             
             <TouchableOpacity 
               style={styles.logoutBtn} 
@@ -79,11 +106,9 @@ export default function AuthScreen() {
     );
   }
 
-  // 4. GUEST / FORM VIEW
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -92,13 +117,11 @@ export default function AuthScreen() {
           contentContainerStyle={styles.scrollContainer} 
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
           <View style={styles.headerContainer}>
             <Image source={require('../assets/watching-tv.png')} style={styles.logoImage} />
             <Text style={styles.headerTitle}>MOVIES DB</Text>
           </View>
 
-          {/* Input Fields */}
           <View style={styles.formContainer}>
             <Text style={styles.label}>EMAIL</Text>
             <TextInput 
@@ -140,49 +163,45 @@ export default function AuthScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Divider */}
           <View style={styles.dividerContainer}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>OR</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Social Icons */}
           <View style={styles.socialRow}>
+            {/* GOOGLE BUTTON */}
             <TouchableOpacity 
               style={[
-                styles.socialIconBtn,
-                // Optional: Add a red border while spinning to show it's active
-                isLoading && { borderColor: THEME.googleColor, borderWidth: 2 } 
+                styles.socialIconBtn, 
+                (isLoading && activeProviderRef.current === 'google') && { borderColor: THEME.googleColor, borderWidth: 2 }
               ]} 
-              onPress={() => dispatch(startManualGoogleLogin())}
-              // Important: Prevent double-clicks
+              onPress={handleGooglePress}
               disabled={isLoading}
             >
-              {isLoading ? (
-                // SHOW SPINNER
+              {isLoading && activeProviderRef.current === 'google' ? (
                 <ActivityIndicator size="small" color={THEME.googleColor} />
               ) : (
-                // SHOW GOOGLE ICON
                 <AntDesign name="google" size={32} color={THEME.googleColor} />
               )}
             </TouchableOpacity>
 
-            {/* <TouchableOpacity 
-              style={styles.socialIconBtn} 
-              onPress={() => dispatch(startAppleLogin())}
+            {/* APPLE BUTTON - Loading logic updated to use THEME.accent to match Google style */}
+            <TouchableOpacity 
+              style={[
+                styles.socialIconBtn,
+                (isLoading && activeProviderRef.current === 'apple') && { borderColor: THEME.subText, borderWidth: 2 }
+              ]} 
+              onPress={handleApplePress}
+              disabled={isLoading}
             >
-              <FontAwesome name="apple" size={24} color="#fff" />
-            </TouchableOpacity> */}
-
-            {/* <TouchableOpacity 
-              style={styles.socialIconBtn} 
-              onPress={() => dispatch(startFacebookLogin())}
-            >
-              <FontAwesome name="facebook" size={24} color="#1877F2" />
-            </TouchableOpacity> */}
+              {isLoading && activeProviderRef.current === 'apple' ? (
+                <ActivityIndicator size="small" color={THEME.subText} />
+              ) : (
+                <FontAwesome name="apple" size={32} color="#fff" />
+              )}
+            </TouchableOpacity>
           </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
