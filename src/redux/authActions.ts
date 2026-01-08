@@ -10,8 +10,13 @@ import {
   OAuthProvider,
   signInWithCredential, 
   signInWithPopup, 
-  // signInWithRedirect, // REMOVED (CRASHES ANDROID)
-  // getRedirectResult,  // REMOVED (NOT NEEDED WITH INVERTASE)
+  // signInWithRedirect, // REMOVED
+  // getRedirectResult,  // REMOVED
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,     
+  sendEmailVerification,          
+  sendPasswordResetEmail,         
+  updateProfile,                  
   signOut as firebaseSignOut, 
   User as FirebaseUser,
   onAuthStateChanged
@@ -21,8 +26,6 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { firebaseAuth } from '../firebase/firebaseConfig';
 import { Alert, Platform } from 'react-native';
 import * as Crypto from 'expo-crypto';
-
-// IMPORT INVERTASE (Only used for Android)
 import { appleAuthAndroid } from '@invertase/react-native-apple-authentication';
 
 // --- TYPES ---
@@ -40,6 +43,7 @@ export interface UserProfile {
   displayName: string | null;
   email: string | null;
   photoURL: string | null;
+  emailVerified: boolean; 
   providerId?: string;
 }
 
@@ -66,6 +70,7 @@ const mapFirebaseUser = (user: FirebaseUser): UserProfile => {
     displayName: bestName,
     email: user.email,
     photoURL: bestPhoto,
+    emailVerified: user.emailVerified,
     providerId: user.providerData[0]?.providerId,
   };
 };
@@ -73,16 +78,13 @@ const mapFirebaseUser = (user: FirebaseUser): UserProfile => {
 const configureAuthSDKs = () => {
   if (Platform.OS !== 'web') {
     try {
-      // Configure Google
       GoogleSignin.configure({
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
         iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
         offlineAccess: false,
         scopes: ['profile', 'email'],
       });
-
-      // Configure Facebook (COMMENTED)
-      // Settings.initializeSDK(); 
+      // Settings.initializeSDK(); // COMMENTED
     } catch (e) {    
       console.warn("SDK Config Warning:", e);
     }
@@ -94,17 +96,12 @@ export const initAuth = () => {
   return async (dispatch: Dispatch) => {
     try {
       configureAuthSDKs();
-
-      // NOTE: We do NOT need getRedirectResult anymore because Invertase
-      // handles the result directly in the startAppleLogin promise.
-
       const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
         if (user) {
           dispatch({ 
             type: LOGIN_SUCCESS, 
             payload: mapFirebaseUser(user) 
           });
-          // We don't show WELCOME here because this fires on every app restart
         } else {
           dispatch({ type: SHOW_MODAL, payload: { type: 'LOGIN_OPTIONS' } });
         }
@@ -117,9 +114,71 @@ export const initAuth = () => {
   };
 };
 
+// --- EMAIL/PASSWORD ACTIONS ---
+
+export const startEmailSignUp = (email: string, pass: string) => async (dispatch: Dispatch<any>) => {
+  dispatch({ type: LOADING_START });
+  try {
+    const result = await createUserWithEmailAndPassword(firebaseAuth, email, pass);
+    if (result.user) {
+        await updateProfile(result.user, { displayName: "Member" });
+        await sendEmailVerification(result.user);
+    }
+    dispatch({ 
+      type: LOGIN_SUCCESS, 
+      payload: mapFirebaseUser(result.user) 
+    });
+  } catch (error: any) {
+    let msg = error.message;
+    if (error.code === 'auth/email-already-in-use') {
+      msg = "Account exists! Please Log In instead.";
+    }
+    dispatch({ type: LOGIN_FAILURE, payload: msg });
+  } finally {
+    dispatch({ type: LOADING_END });
+  }
+};
+
+export const startEmailLogin = (email: string, pass: string) => async (dispatch: Dispatch<any>) => {
+  dispatch({ type: LOADING_START });
+  try {
+    const result = await signInWithEmailAndPassword(firebaseAuth, email, pass);
+    // Logic: If password is wrong, we catch error below. 
+    // If correct, we dispatch SUCCESS. The UI then checks emailVerified.
+    dispatch({ 
+      type: LOGIN_SUCCESS, 
+      payload: mapFirebaseUser(result.user) 
+    });
+  } catch (error: any) {
+    let msg = error.message;
+    if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+      msg = "Invalid email or password.";
+    }
+    dispatch({ type: LOGIN_FAILURE, payload: msg });
+  } finally {
+    dispatch({ type: LOADING_END });
+  }
+};
+
+export const sendForgotPassword = (email: string) => async (dispatch: Dispatch<any>) => {
+  if (!email) {
+    dispatch({ type: LOGIN_FAILURE, payload: "Please enter your email first." });
+    return;
+  }
+  dispatch({ type: LOADING_START });
+  try {
+    await sendPasswordResetEmail(firebaseAuth, email);
+    Alert.alert("Reset Link Sent", "Check your email inbox to reset your password.");
+  } catch (error: any) {
+    dispatch({ type: LOGIN_FAILURE, payload: error.message });
+  } finally {
+    dispatch({ type: LOADING_END });
+  }
+};
+
 // --- GOOGLE LOGIN ---
 export const startManualGoogleLogin = () => async (dispatch: Dispatch<any>) => {
-  dispatch({ type: 'LOADING_START' });
+  dispatch({ type: LOADING_START });
   try {
     if (Platform.OS === 'web') {
       const provider = new GoogleAuthProvider();
@@ -130,35 +189,30 @@ export const startManualGoogleLogin = () => async (dispatch: Dispatch<any>) => {
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
       if (response.type === 'cancelled' || !response.data?.idToken) {
-         dispatch({ type: 'LOADING_END' });
+         dispatch({ type: LOADING_END });
          return;
       }
-      
       if (isSuccessResponse(response) && response.data?.idToken) {
         const credential = GoogleAuthProvider.credential(response.data.idToken);
         const firebaseResult = await signInWithCredential(firebaseAuth, credential);
-
-        dispatch({ 
-          type: LOGIN_SUCCESS, 
-          payload: mapFirebaseUser(firebaseResult.user) 
-        });
+        dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(firebaseResult.user) });
         dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
       }
     }
   } catch (error: any) {
     if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-      dispatch({ type: 'LOADING_END' });
+      dispatch({ type: LOADING_END });
       return;
     } 
     dispatch({ type: LOGIN_FAILURE, payload: error.message || 'Google Login Failed' });
   } finally {
-    dispatch({ type: 'LOADING_END' });
+    dispatch({ type: LOADING_END });
   }
 };
 
 /* --- FACEBOOK LOGIN (RESTORED) ---
 export const startFacebookLogin = () => async (dispatch: Dispatch<any>) => {
-  dispatch({ type: 'LOADING_START' });
+  dispatch({ type: LOADING_START });
   try {
     if (Platform.OS === 'web') {
       const provider = new FacebookAuthProvider();
@@ -168,7 +222,7 @@ export const startFacebookLogin = () => async (dispatch: Dispatch<any>) => {
     } else {
       const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
       if (result.isCancelled) {
-        dispatch({ type: 'LOADING_END' });
+        dispatch({ type: LOADING_END });
         return;
       }
       const data = await AccessToken.getCurrentAccessToken();
@@ -186,35 +240,26 @@ export const startFacebookLogin = () => async (dispatch: Dispatch<any>) => {
   } catch (error: any) {
     dispatch({ type: LOGIN_FAILURE, payload: error.message || 'Facebook Login Failed' });
   } finally {
-    dispatch({ type: 'LOADING_END' });
+    dispatch({ type: LOADING_END });
   }
 };
 */
 
 // --- APPLE LOGIN ---
 export const startAppleLogin = () => async (dispatch: Dispatch<any>) => {  
-  dispatch({ type: 'LOADING_START' });
-  
+  dispatch({ type: LOADING_START });
   try {
     const rawNonce = Crypto.randomUUID(); 
     const state = Crypto.randomUUID(); 
 
-    // --- 1. WEB FLOW ---
     if (Platform.OS === 'web') {
       const provider = new OAuthProvider('apple.com');
       const result = await signInWithPopup(firebaseAuth, provider);
-      
-      dispatch({ 
-        type: LOGIN_SUCCESS, 
-        payload: mapFirebaseUser(result.user) 
-      });
+      dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(result.user) });
       dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
       return;
     } 
-
-    // --- 2. ANDROID FLOW (Use Invertase) ---
     else if (Platform.OS === 'android') {
-      // Configure interception
       appleAuthAndroid.configure({
         clientId: 'movies.database.sid', 
         redirectUri: 'https://moviesdatabasecollection.firebaseapp.com/__/auth/handler', 
@@ -227,20 +272,15 @@ export const startAppleLogin = () => async (dispatch: Dispatch<any>) => {
       const response = await appleAuthAndroid.signIn();
       if (!response || !response.id_token) throw new Error("Android Apple Login Failed");
       
-      // EXCHANGE STEP (Interverse Logic):
-      // We take the token WE intercepted, and MANUALLY give it to Firebase.
       const provider = new OAuthProvider('apple.com');
       const credential = provider.credential({
         idToken: response.id_token,
-        rawNonce: rawNonce, // Required for Android
+        rawNonce: rawNonce,
       });
-
       const firebaseResult = await signInWithCredential(firebaseAuth, credential);
       dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(firebaseResult.user) });
       dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
     } 
-
-    // --- 3. IOS FLOW (Use Expo - Your Original Code) ---
     else {
       const isAvailable = await AppleAuthentication.isAvailableAsync();
       if (!isAvailable) throw new Error("Apple Sign-In is not available.");
@@ -250,46 +290,31 @@ export const startAppleLogin = () => async (dispatch: Dispatch<any>) => {
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
-        // I restored this to your original simple call if you prefer, 
-        // but passing a nonce is actually recommended for Firebase. 
-        // If your original code didn't have it, you can remove 'nonce: rawNonce'.
         nonce: rawNonce 
       });
 
       const { identityToken } = credential;
       if (!identityToken) throw new Error("No Identity Token from Apple");
 
-      // EXCHANGE STEP (Expo Logic):
       const provider = new OAuthProvider('apple.com');
       const fbCredential = provider.credential({ 
         idToken: identityToken,
-        rawNonce: rawNonce // Match the nonce sent above
+        rawNonce: rawNonce 
       });
       
       const firebaseResult = await signInWithCredential(firebaseAuth, fbCredential);
-
-      dispatch({ 
-        type: LOGIN_SUCCESS, 
-        payload: mapFirebaseUser(firebaseResult.user) 
-      });
+      dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(firebaseResult.user) });
       dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
     }
   } catch (error: any) {
-    const isCancelled = 
-      error.code === 'ERR_CANCELED' || 
-      error.code === 'E_SIGNIN_CANCELLED' || 
-      error.code === 'auth/cancelled-popup-request' ||
-      error.message?.includes('user canceled');
-
+    const isCancelled = error.code === 'ERR_CANCELED' || error.message?.includes('user canceled');
     if (isCancelled) {
-      console.log('User canceled Apple Login');
-      dispatch({ type: 'LOADING_END' });
+      dispatch({ type: LOADING_END });
       return;
     }
-    console.log(error.message)
     dispatch({ type: LOGIN_FAILURE, payload: error.message || "Apple Login Failed" });
   } finally {
-    dispatch({ type: 'LOADING_END' });
+    dispatch({ type: LOADING_END });
   }
 };
 

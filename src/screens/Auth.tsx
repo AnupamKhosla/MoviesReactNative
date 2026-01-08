@@ -11,18 +11,28 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Keyboard,
+  AppState 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
-import { AntDesign, FontAwesome } from '@expo/vector-icons'; 
+import { AntDesign, FontAwesome, MaterialIcons } from '@expo/vector-icons'; 
+import { firebaseAuth } from '../firebase/firebaseConfig';
+import { sendEmailVerification } from 'firebase/auth'; 
 
+// --- CORRECTED IMPORTS MATCHING YOUR AUTHACTIONS.TS ---
 import { 
   startManualGoogleLogin, 
   startAppleLogin, 
+  startEmailLogin,     // Was loginWithEmail
+  startEmailSignUp,    // Was registerWithEmail
+  sendForgotPassword,  // Was resetPassword
   logoutUser,
-  clearAuthError
+  clearAuthError,
+  LOGIN_SUCCESS
 } from '../redux/authActions';
+
 import { THEME } from '../constants/theme';
 import { SafeAvatar } from '../components/SafeAvatar';
 
@@ -30,13 +40,14 @@ export default function AuthScreen() {
   const dispatch = useDispatch<any>();
   const { user, isLoading, error } = useSelector((state: any) => state.auth);
 
-  const activeProviderRef = useRef<'google' | 'apple' | null>(null);
+  const activeProviderRef = useRef<'google' | 'apple' | 'email' | null>(null);
 
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
+  const [isCheckingVerify, setIsCheckingVerify] = useState(false);
 
-  // Auto-reset reference when loading finishes
   if (!isLoading) {
     activeProviderRef.current = null;
   }
@@ -44,19 +55,51 @@ export default function AuthScreen() {
   useEffect(() => {
     if (error) {
       Alert.alert(
-        "Authentication Failed",
+        "Authentication Alert",
         error,
         [{ text: "OK", onPress: () => dispatch(clearAuthError()) }]
       );
     }
   }, [error, dispatch]);
 
+
+  // =================================================================
+  //  SMART RESUME LOGIC (APP STATE LISTENER)
+  // =================================================================
+  useEffect(() => {
+    // Logic: Only run if user exists (Password matched) AND is unverified
+    const isLimbo = user && !user.emailVerified && user.providerId === 'password';
+
+    if (!isLimbo) return;
+
+    const handleAppStateChange = async (nextAppState: any) => {
+      if (nextAppState === 'active' && firebaseAuth.currentUser) {
+        try {
+          await firebaseAuth.currentUser.reload();
+          if (firebaseAuth.currentUser.emailVerified) {
+             dispatch({ 
+                type: LOGIN_SUCCESS, 
+                payload: { ...user, emailVerified: true } 
+             });
+          }
+        } catch (e) {
+          console.log("Smart Resume Check Failed", e);
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, [user, dispatch]);
+
+
+  // --- HELPERS ---
   const getCleanData = () => {
     if (!user) return null;
-
     let cleanName = (user.displayName || "").replace(/null/gi, "").trim();
     if (!cleanName) cleanName = "User";
-
     let cleanEmail = (user.email || "").replace(/null/gi, "").trim();
     if (!cleanEmail) cleanEmail = "Email Hidden";
 
@@ -69,17 +112,136 @@ export default function AuthScreen() {
 
   const cleanData = getCleanData();
 
-  // Handlers without timeouts
-  const handleGooglePress = () => {
-    activeProviderRef.current = 'google';
-    dispatch(startManualGoogleLogin());
+
+  // --- HANDLERS ---
+  const handleEmailAuth = () => {
+    Keyboard.dismiss();
+    if (!email || !password) {
+      Alert.alert("Missing Info", "Please enter both email and password.");
+      return;
+    }
+    activeProviderRef.current = 'email';
+    
+    // --- CORRECTED FUNCTION CALLS ---
+    if (isLoginMode) {
+      dispatch(startEmailLogin(email, password));
+    } else {
+      if (password.length < 6) {
+        Alert.alert("Weak Password", "Password must be at least 6 characters.");
+        return;
+      }
+      dispatch(startEmailSignUp(email, password));
+    }
   };
 
-  const handleApplePress = () => {
-    activeProviderRef.current = 'apple';
-    dispatch(startAppleLogin());
+  const handleForgotPass = () => {
+    Keyboard.dismiss();
+    if (!email) {
+      Alert.alert("Email Required", "Please enter your email address in the field above first.");
+      return;
+    }
+    // --- CORRECTED FUNCTION CALL ---
+    dispatch(sendForgotPassword(email));
   };
 
+  const handleManualCheck = async () => {
+    if (!firebaseAuth.currentUser) return;
+    setIsCheckingVerify(true);
+    try {
+      await firebaseAuth.currentUser.reload();
+      if (firebaseAuth.currentUser.emailVerified) {
+         dispatch({ 
+            type: LOGIN_SUCCESS, 
+            payload: { ...user, emailVerified: true } 
+         });
+      } else {
+        Alert.alert("Not Verified Yet", "We checked, but the email is not verified yet. Try refreshing again in a moment.");
+      }
+    } catch(e) { console.log(e); }
+    setIsCheckingVerify(false);
+  };
+
+  const handleResendEmail = async () => {
+    if (firebaseAuth.currentUser) {
+      try {
+        await sendEmailVerification(firebaseAuth.currentUser);
+        Alert.alert("Sent!", "Link resent. Check spam folder.");
+      } catch (e: any) {
+        Alert.alert("Error", e.message || "Could not resend email.");
+      }
+    }
+  };
+
+
+  // =========================================================
+  // VIEW 1: THE "LIMBO" SCREEN (Unverified Email)
+  // =========================================================
+  if (user && !user.emailVerified && user.providerId === 'password') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.centerContent}>
+          <View style={styles.profileCard}>
+            
+            <MaterialIcons 
+              name="mark-email-unread" 
+              size={80} 
+              color={THEME.accent} 
+              style={{ marginBottom: 20 }}
+            />
+            
+            <Text style={styles.welcomeText}>Verify your Email</Text>
+            
+            <Text style={styles.limboText}>
+              We sent a verification link to:{"\n"}
+              <Text style={{ color: THEME.text, fontWeight: 'bold' }}>{user.email}</Text>
+            </Text>
+
+            <Text style={styles.limboSubText}>
+              Check your inbox (and spam). The app will update automatically.
+            </Text>
+
+            {/* MANUAL CHECK BUTTON */}
+            <View style={{ width: '100%', paddingVertical: 10 }}>
+              <TouchableOpacity 
+                style={styles.primaryBtn}
+                onPress={handleManualCheck}
+                disabled={isCheckingVerify}
+              >
+                {isCheckingVerify ? (
+                  <ActivityIndicator color="#000" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>I HAVE VERIFIED</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* RESEND LINK */}
+            <TouchableOpacity 
+              style={{ marginTop: 20, padding: 10 }}
+              onPress={handleResendEmail}
+            >
+              <Text style={{ color: THEME.accent, fontWeight: 'bold', fontSize: 14 }}>Resend Email</Text>
+            </TouchableOpacity>
+
+            {/* LOGOUT */}
+            <TouchableOpacity 
+              style={styles.logoutBtn} 
+              onPress={() => dispatch(logoutUser())}
+            >
+              <Text style={styles.logoutText}>Wrong email? Log Out</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+
+  // =========================================================
+  // VIEW 2: LOGGED IN & VERIFIED (Main App)
+  // =========================================================
   if (user && cleanData) {
     return (
       <SafeAreaView style={styles.container}>
@@ -106,6 +268,10 @@ export default function AuthScreen() {
     );
   }
 
+
+  // =========================================================
+  // VIEW 3: AUTH FORM
+  // =========================================================
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -116,6 +282,7 @@ export default function AuthScreen() {
         <ScrollView 
           contentContainerStyle={styles.scrollContainer} 
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.headerContainer}>
             <Image source={require('../assets/watching-tv.png')} style={styles.logoImage} />
@@ -144,10 +311,27 @@ export default function AuthScreen() {
               onChangeText={setPassword}
             />
 
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => Alert.alert("Use Google Sign-In for now")}>
-              <Text style={styles.primaryBtnText}>
-                {isLoginMode ? "LOG IN" : "SIGN UP"}
-              </Text>
+             {isLoginMode && (
+              <TouchableOpacity style={styles.forgotPassContainer} onPress={handleForgotPass}>
+                <Text style={styles.forgotPassText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity 
+              style={[
+                styles.primaryBtn, 
+                (isLoading && activeProviderRef.current === 'email') && { opacity: 0.7 }
+              ]} 
+              onPress={handleEmailAuth}
+              disabled={isLoading}
+            >
+              {isLoading && activeProviderRef.current === 'email' ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Text style={styles.primaryBtnText}>
+                  {isLoginMode ? "LOG IN" : "SIGN UP"}
+                </Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -170,13 +354,15 @@ export default function AuthScreen() {
           </View>
 
           <View style={styles.socialRow}>
-            {/* GOOGLE BUTTON */}
             <TouchableOpacity 
               style={[
                 styles.socialIconBtn, 
                 (isLoading && activeProviderRef.current === 'google') && { borderColor: THEME.googleColor, borderWidth: 2 }
               ]} 
-              onPress={handleGooglePress}
+              onPress={() => {
+                activeProviderRef.current = 'google';
+                dispatch(startManualGoogleLogin());
+              }}
               disabled={isLoading}
             >
               {isLoading && activeProviderRef.current === 'google' ? (
@@ -186,13 +372,15 @@ export default function AuthScreen() {
               )}
             </TouchableOpacity>
 
-            {/* APPLE BUTTON - Loading logic updated to use THEME.accent to match Google style */}
             <TouchableOpacity 
               style={[
                 styles.socialIconBtn,
                 (isLoading && activeProviderRef.current === 'apple') && { borderColor: THEME.subText, borderWidth: 2 }
               ]} 
-              onPress={handleApplePress}
+              onPress={() => {
+                activeProviderRef.current = 'apple';
+                dispatch(startAppleLogin());
+              }}
               disabled={isLoading}
             >
               {isLoading && activeProviderRef.current === 'apple' ? (
@@ -209,155 +397,193 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,  
+  // --- LAYOUT ---
+  container: { 
+    flex: 1 
   },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
+  scrollContainer: { 
+    flexGrow: 1, 
+    paddingHorizontal: 24, 
+    justifyContent: 'center' 
   },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  centerContent: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
+
+  // --- HEADER ---
+  headerContainer: { 
+    alignItems: 'center', 
+    marginBottom: 20 
   },
-  logoImage: {
-    width: 70,
-    height: 70,
-    marginBottom: 15,
+  logoImage: { 
+    width: 70, 
+    height: 70, 
+    marginBottom: 15 
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: THEME.text,
-    letterSpacing: 2,
+  headerTitle: { 
+    fontSize: 24, 
+    fontWeight: '800', 
+    color: THEME.text, 
+    letterSpacing: 2 
   },
-  formContainer: {
-    width: '100%',
+
+  // --- FORM ---
+  formContainer: { 
+    width: '100%' 
   },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: THEME.accent,
-    marginBottom: 4,
-    letterSpacing: 1,
+  label: { 
+    fontSize: 14, // ACCESS: Min 14px
+    fontWeight: '700', 
+    color: THEME.accent, 
+    marginBottom: 4, 
+    letterSpacing: 1 
   },
-  input: {
-    backgroundColor: THEME.inputBg,
-    borderWidth: 1,
-    borderColor: THEME.border,
-    borderRadius: 8,
-    padding: 12,
+  input: { 
+    backgroundColor: THEME.inputBg, 
+    borderWidth: 1, 
+    borderColor: THEME.border, 
+    borderRadius: 8, 
+    padding: 12, 
+    fontSize: 16, 
+    color: THEME.text, 
+    marginBottom: 12 
+  },
+
+  // --- BUTTONS ---
+  primaryBtn: { 
+    backgroundColor: THEME.accent, 
+    borderRadius: 8, 
+    paddingVertical: 14, 
+    alignItems: 'center', 
+    marginTop: 5 
+  },
+  primaryBtnText: { 
+    color: '#000', 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    letterSpacing: 0.5 
+  },
+  toggleContainer: { 
+    marginTop: 15, 
+    alignItems: 'center', 
+    padding: 5 
+  },
+  toggleText: { 
+    color: THEME.subText, 
+    fontSize: 16 
+  },
+  toggleHighlight: { 
+    color: THEME.accent, 
+    fontWeight: 'bold' 
+  },
+
+  // --- SOCIAL ---
+  dividerContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginVertical: 15 
+  },
+  dividerLine: { 
+    flex: 1, 
+    height: 1, 
+    backgroundColor: THEME.border 
+  },
+  dividerText: { 
+    marginHorizontal: 16, 
+    color: THEME.subText, 
+    fontWeight: 'bold', 
+    fontSize: 14 // ACCESS: Min 14px
+  },
+  socialRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    gap: 15, 
+    paddingBottom: 10 
+  },
+  socialIconBtn: { 
+    width: 64, 
+    height: 64, 
+    borderRadius: 100, 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderWidth: 1, 
+    borderColor: 'rgba(255,255,255,0.2)' 
+  },
+
+  // --- PROFILE / LIMBO CARD ---
+  profileCard: { 
+    backgroundColor: THEME.card, 
+    width: '90%', 
+    padding: 30, 
+    borderRadius: 20, 
+    alignItems: 'center', 
+    borderWidth: 1, 
+    borderColor: THEME.border 
+  },
+  profileImage: { 
+    width: 100, 
+    height: 100, 
+    borderRadius: 50, 
+    marginBottom: 20, 
+    borderWidth: 2, 
+    borderColor: THEME.accent 
+  },
+  welcomeText: { 
+    color: THEME.subText, 
     fontSize: 16,
-    color: THEME.text,
-    marginBottom: 12,
+    textAlign: 'center' 
   },
-  primaryBtn: {
-    backgroundColor: THEME.accent,
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 5,
+  userName: { 
+    color: THEME.text, 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    marginVertical: 5 
   },
-  primaryBtnText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+  userEmail: { 
+    color: THEME.accent, 
+    fontSize: 14, // ACCESS: Min 14px
+    marginBottom: 30 
   },
-  toggleContainer: {
-    marginTop: 15,
-    alignItems: 'center',
-    padding: 5,
-  },
-  toggleText: {
-    color: THEME.subText,
-    fontSize: 16,
-  },
-  toggleHighlight: {
-    color: THEME.accent,
-    fontWeight: 'bold',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: THEME.border,
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: THEME.subText,
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 15,
-    paddingBottom: 10,
-  },
-  socialIconBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  profileCard: {
-    backgroundColor: THEME.card,
-    width: '90%',
-    padding: 30,
-    borderRadius: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: THEME.border,
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: THEME.accent,
-  },
-  welcomeText: {
-    color: THEME.subText,
-    fontSize: 16,
-  },
-  userName: {
-    color: THEME.text,
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 5,
-  },
-  userEmail: {
-    color: THEME.accent,
-    fontSize: 14,
-    marginBottom: 30,
-  },
-  logoutBtn: {
-    backgroundColor: 'rgba(255,0,0,0.2)',
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    borderWidth: 2,
+  logoutBtn: { 
+    backgroundColor: 'rgba(255,0,0,0.2)', 
+    paddingVertical: 12, 
+    paddingHorizontal: 40, 
+    borderRadius: 30, 
+    borderWidth: 2, 
     borderColor: THEME.btnBorder,
+    marginTop: 10
   },
-  logoutText: {
-    color: '#ffe4e6',
-    fontWeight: 'bold',
-    fontSize: 16,
+  logoutText: { 
+    color: '#ffe4e6', 
+    fontWeight: 'bold', 
+    fontSize: 16 
+  },
+
+  // --- LIMBO SPECIFIC ---
+  limboText: { 
+    textAlign: 'center', 
+    color: THEME.subText, 
+    fontSize: 16, 
+    lineHeight: 24, 
+    marginBottom: 10,
+    marginTop: 10
+  },
+  limboSubText: { 
+    textAlign: 'center', 
+    color: THEME.subText, 
+    fontSize: 14, // ACCESS: Min 14px
+    marginBottom: 20, 
+    opacity: 0.7 
+  },
+  forgotPassContainer: { 
+    alignSelf: 'flex-end', 
+    marginBottom: 15 
+  },
+  forgotPassText: { 
+    color: THEME.subText, 
+    fontSize: 14 // ACCESS: Min 14px
   },
 });

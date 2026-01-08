@@ -36,7 +36,7 @@ export const THEME = {
   background: '#2b0505',
   card: '#7e1111ff',       
   text: '#ffffff',       
-  subText: '#d1d5db',   
+  subText: '#eaebedff',   
   accent: '#FFD700',
   inputBg: 'rgba(0, 0, 0, 0.3)',
   border: '#5c1414',
