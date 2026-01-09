@@ -18,16 +18,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { AntDesign, FontAwesome, MaterialIcons } from '@expo/vector-icons'; 
-import { firebaseAuth } from '../firebase/firebaseConfig';
-import { sendEmailVerification } from 'firebase/auth'; 
 
-// --- CORRECTED IMPORTS MATCHING YOUR AUTHACTIONS.TS ---
+// --- NATIVE MODULAR IMPORTS ---
+import { 
+  reload, 
+  sendEmailVerification 
+} from '@react-native-firebase/auth';
+
+import { firebaseAuth } from '../firebase/firebaseConfig';
+
 import { 
   startManualGoogleLogin, 
   startAppleLogin, 
-  startEmailLogin,     // Was loginWithEmail
-  startEmailSignUp,    // Was registerWithEmail
-  sendForgotPassword,  // Was resetPassword
+  startEmailLogin,     
+  startEmailSignUp,    
+  sendForgotPassword,  
   logoutUser,
   clearAuthError,
   LOGIN_SUCCESS
@@ -48,6 +53,7 @@ export default function AuthScreen() {
   
   const [isCheckingVerify, setIsCheckingVerify] = useState(false);
 
+  // Reset provider state when loading finishes
   if (!isLoading) {
     activeProviderRef.current = null;
   }
@@ -73,10 +79,14 @@ export default function AuthScreen() {
     if (!isLimbo) return;
 
     const handleAppStateChange = async (nextAppState: any) => {
-      if (nextAppState === 'active' && firebaseAuth.currentUser) {
+      const currentUser = firebaseAuth.currentUser;
+      
+      if (nextAppState === 'active' && currentUser) {
         try {
-          await firebaseAuth.currentUser.reload();
-          if (firebaseAuth.currentUser.emailVerified) {
+          // FIX: Modular Native Reload
+          await reload(currentUser);
+          
+          if (currentUser.emailVerified) {
              dispatch({ 
                 type: LOGIN_SUCCESS, 
                 payload: { ...user, emailVerified: true } 
@@ -122,7 +132,6 @@ export default function AuthScreen() {
     }
     activeProviderRef.current = 'email';
     
-    // --- CORRECTED FUNCTION CALLS ---
     if (isLoginMode) {
       dispatch(startEmailLogin(email, password));
     } else {
@@ -140,16 +149,19 @@ export default function AuthScreen() {
       Alert.alert("Email Required", "Please enter your email address in the field above first.");
       return;
     }
-    // --- CORRECTED FUNCTION CALL ---
     dispatch(sendForgotPassword(email));
   };
 
   const handleManualCheck = async () => {
-    if (!firebaseAuth.currentUser) return;
+    const currentUser = firebaseAuth.currentUser;
+    if (!currentUser) return;
+    
     setIsCheckingVerify(true);
     try {
-      await firebaseAuth.currentUser.reload();
-      if (firebaseAuth.currentUser.emailVerified) {
+      // FIX: Modular Native Reload
+      await reload(currentUser);
+      
+      if (currentUser.emailVerified) {
          dispatch({ 
             type: LOGIN_SUCCESS, 
             payload: { ...user, emailVerified: true } 
@@ -162,9 +174,11 @@ export default function AuthScreen() {
   };
 
   const handleResendEmail = async () => {
-    if (firebaseAuth.currentUser) {
+    const currentUser = firebaseAuth.currentUser;
+    if (currentUser) {
       try {
-        await sendEmailVerification(firebaseAuth.currentUser);
+        // FIX: Modular Native Send Verification
+        await sendEmailVerification(currentUser);
         Alert.alert("Sent!", "Link resent. Check spam folder.");
       } catch (e: any) {
         Alert.alert("Error", e.message || "Could not resend email.");
