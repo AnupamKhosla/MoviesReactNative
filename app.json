@@ -33,7 +33,7 @@
       "permissions": [
         "com.google.android.gms.permission.AD_ID"
       ],
-      "versionCode": 8
+      "versionCode": 9
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
