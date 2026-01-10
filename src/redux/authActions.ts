@@ -108,10 +108,17 @@ const setupAppCheck = async () => {
   try {
     const app = getApp();
     const provider = new ReactNativeFirebaseAppCheckProvider();
+    let token: string | undefined = undefined;
+    if(__DEV__) {
+      token = require('../firebase/tokensHiddenIgnored').FIREBASE_DEBUG_TOKEN;
+      
+    }
+
 
     provider.configure({
       android: {
         provider: __DEV__ ? 'debug' : 'playIntegrity',
+        debugToken: __DEV__ ? token : undefined,
       },
       apple: {
         provider: __DEV__ ? 'debug' : 'appAttestWithDeviceCheckFallback',
