@@ -10,39 +10,34 @@ import * as Crypto from 'expo-crypto';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { appleAuthAndroid } from '@invertase/react-native-apple-authentication';
 
-// --- NATIVE MODULAR IMPORTS (The Fix for Warnings) ---
+// --- NATIVE IMPORTS (Clean, No Aliases) ---
+// We import these directly so they look standard in the code
 import { 
-  getApp as getNativeApp 
-} from '@react-native-firebase/app';
-import { 
-  onAuthStateChanged as nativeOnAuthStateChanged,
-  createUserWithEmailAndPassword as nativeCreateUser,
-  signInWithEmailAndPassword as nativeSignIn,
-  signInWithCredential as nativeSignInWithCredential,
-  sendPasswordResetEmail as nativeSendPasswordReset,
-  signOut as nativeSignOut,
-  // MODULAR USER FUNCTIONS (Fixes 'user.updateProfile' warnings)
+  getAuth, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signInWithCredential,
+  signOut,
+  onAuthStateChanged,
   updateProfile,
   sendEmailVerification,
-  GoogleAuthProvider as NativeGoogleAuthProvider,
-  FacebookAuthProvider as NativeFacebookAuthProvider,
-  AppleAuthProvider as NativeAppleAuthProvider
+  GoogleAuthProvider,
+  AppleAuthProvider
 } from '@react-native-firebase/auth';
+
+import { getApp } from '@react-native-firebase/app';
 
 // --- APP CHECK IMPORTS ---
 import { 
   initializeAppCheck, 
-  ReactNativeFirebaseAppCheckProvider,
+  ReactNativeFirebaseAppCheckProvider, 
   getToken 
 } from '@react-native-firebase/app-check';
 
-// --- WEB IMPORTS (Aliased types) ---
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  OAuthProvider,
-  User as FirebaseUser
-} from 'firebase/auth';
+// --- WEB IMPORTS (Namespaced) ---
+// We import this as one object to avoid name collisions and aliases
+import * as WebAuth from 'firebase/auth';
 
 import { firebaseAuth } from '../firebase/firebaseConfig';
 
@@ -70,16 +65,13 @@ const mapFirebaseUser = (user: any): UserProfile => {
   const providerData = user.providerData || [];
   const googleProvider = providerData.find((p: any) => p.providerId === 'google.com');
   const appleProvider = providerData.find((p: any) => p.providerId === 'apple.com');
-  // const facebookProvider = providerData.find((p: any) => p.providerId === 'facebook.com'); // FB: COMMENTED
 
   const bestName = googleProvider?.displayName || 
                    appleProvider?.displayName || 
-                   // facebookProvider?.displayName || // FB: COMMENTED
                    user.displayName || 
                    'User';
 
   const bestPhoto = googleProvider?.photoURL || 
-                    // facebookProvider?.photoURL || // FB: COMMENTED
                     appleProvider?.photoURL || 
                     user.photoURL || 
                     null;
@@ -114,7 +106,7 @@ const setupAppCheck = async () => {
   if (Platform.OS === 'web') return; 
 
   try {
-    const app = getNativeApp();
+    const app = getApp();
     const provider = new ReactNativeFirebaseAppCheckProvider();
 
     provider.configure({
@@ -131,9 +123,13 @@ const setupAppCheck = async () => {
       isTokenAutoRefreshEnabled: true,
     });
     
-    // VERIFY: Gatekeeper to ensure token is ready
-    const result = await getToken(appCheckInstance, true);
-    console.log(`✅ App Check Token Ready: ${result.token.substring(0, 6)}...`);
+    // VERIFY: Gatekeeper
+    try {
+        const result = await getToken(appCheckInstance, false);
+        console.log(`✅ App Check Token Active. Expires in: ${Math.floor((result.expireTimeMillis - Date.now())/1000)}s`);
+    } catch(e) {
+        console.warn("⚠️ Initial token fetch delayed:", e);
+    }
 
   } catch (error: any) {
     console.error('❌ App Check Setup Error:', error);
@@ -151,9 +147,10 @@ export const initAuth = () => {
     try {
       configureAuthSDKs();
       
-      // MODULAR LISTENER
       if (Platform.OS !== 'web') {
-          const unsubscribe = nativeOnAuthStateChanged(firebaseAuth, (user: any) => {
+          // NATIVE (Modular Syntax - Clean)
+          const auth = getAuth();
+          const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
               dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(user) });
             } else {
@@ -162,8 +159,8 @@ export const initAuth = () => {
           });
           return unsubscribe;
       } else {
-          // Web fallback
-          const unsubscribe = firebaseAuth.onAuthStateChanged((user: any) => {
+          // WEB (Namespaced)
+          const unsubscribe = WebAuth.onAuthStateChanged(firebaseAuth, (user) => {
             if (user) {
               dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(user) });
             } else {
@@ -185,18 +182,25 @@ export const initAuth = () => {
 export const startEmailSignUp = (email: string, pass: string) => async (dispatch: Dispatch<any>) => {
   dispatch({ type: LOADING_START });
   try {
-    const result = await nativeCreateUser(firebaseAuth, email, pass);
-    
-    if (result.user) {
-        // FIX: Replaced 'result.user.updateProfile' with modular 'updateProfile'
-        await updateProfile(result.user, { displayName: "Member" });
-        // FIX: Replaced 'result.user.sendEmailVerification' with modular 'sendEmailVerification'
-        await sendEmailVerification(result.user);
+    // NATIVE
+    if (Platform.OS !== 'web') {
+      const auth = getAuth();
+      const result = await createUserWithEmailAndPassword(auth, email, pass);
+      
+      if (result.user) {
+          await updateProfile(result.user, { displayName: "Member" });
+          await sendEmailVerification(result.user);
+      }
+      dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(result.user) });
+    } 
+    // WEB
+    else {
+      const result = await WebAuth.createUserWithEmailAndPassword(firebaseAuth, email, pass);
+      if (result.user) {
+          // Note: Web modular updateProfile is separate, simplifying for parity
+          dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(result.user) });
+      }
     }
-    dispatch({ 
-      type: LOGIN_SUCCESS, 
-      payload: mapFirebaseUser(result.user) 
-    });
   } catch (error: any) {
     let msg = error.message;
     if (error.code === 'auth/email-already-in-use') {
@@ -211,11 +215,16 @@ export const startEmailSignUp = (email: string, pass: string) => async (dispatch
 export const startEmailLogin = (email: string, pass: string) => async (dispatch: Dispatch<any>) => {
   dispatch({ type: LOADING_START });
   try {
-    const result = await nativeSignIn(firebaseAuth, email, pass);
-    dispatch({ 
-      type: LOGIN_SUCCESS, 
-      payload: mapFirebaseUser(result.user) 
-    });
+    let user;
+    if (Platform.OS !== 'web') {
+       const auth = getAuth();
+       const result = await signInWithEmailAndPassword(auth, email, pass);
+       user = result.user;
+    } else {
+       const result = await WebAuth.signInWithEmailAndPassword(firebaseAuth, email, pass);
+       user = result.user;
+    }
+    dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(user) });
   } catch (error: any) {
     let msg = error.message;
     if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
@@ -234,7 +243,12 @@ export const sendForgotPassword = (email: string) => async (dispatch: Dispatch<a
   }
   dispatch({ type: LOADING_START });
   try {
-    await nativeSendPasswordReset(firebaseAuth, email);
+    if (Platform.OS !== 'web') {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, email);
+    } else {
+      await WebAuth.sendPasswordResetEmail(firebaseAuth, email);
+    }
     Alert.alert("Reset Link Sent", "Check your email inbox to reset your password.");
   } catch (error: any) {
     dispatch({ type: LOGIN_FAILURE, payload: error.message });
@@ -248,9 +262,9 @@ export const startManualGoogleLogin = () => async (dispatch: Dispatch<any>) => {
   dispatch({ type: LOADING_START });
   try {
     if (Platform.OS === 'web') {
-      const provider = new GoogleAuthProvider();
+      const provider = new WebAuth.GoogleAuthProvider();
       // @ts-ignore
-      const result = await signInWithPopup(firebaseAuth, provider);
+      const result = await WebAuth.signInWithPopup(firebaseAuth, provider);
       dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(result.user) });
       dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
     } else {
@@ -261,9 +275,10 @@ export const startManualGoogleLogin = () => async (dispatch: Dispatch<any>) => {
          return;
       }
       if (isSuccessResponse(response) && response.data?.idToken) {
-        
-        const credential = NativeGoogleAuthProvider.credential(response.data.idToken);
-        const firebaseResult = await nativeSignInWithCredential(firebaseAuth, credential);
+        // NATIVE MODULAR
+        const auth = getAuth();
+        const credential = GoogleAuthProvider.credential(response.data.idToken);
+        const firebaseResult = await signInWithCredential(auth, credential);
         
         dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(firebaseResult.user) });
         dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
@@ -280,29 +295,6 @@ export const startManualGoogleLogin = () => async (dispatch: Dispatch<any>) => {
   }
 };
 
-/* --- FACEBOOK LOGIN (RESTORED, FB: PRESERVED) ---
-export const startFacebookLogin = () => async (dispatch: Dispatch<any>) => {
-  dispatch({ type: LOADING_START });
-  try {
-      // ... platform checks
-      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
-      if (result.isCancelled) return;
-      const data = await AccessToken.getCurrentAccessToken();
-      if (!data) throw new Error('Something went wrong obtaining access token');
-
-      const credential = NativeFacebookAuthProvider.credential(data.accessToken);
-      const firebaseResult = await nativeSignInWithCredential(firebaseAuth, credential);
-
-      dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(firebaseResult.user) });
-      dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
-  } catch (error: any) {
-    dispatch({ type: LOGIN_FAILURE, payload: error.message || 'Facebook Login Failed' });
-  } finally {
-    dispatch({ type: LOADING_END });
-  }
-};
-*/
-
 // --- APPLE LOGIN ---
 export const startAppleLogin = () => async (dispatch: Dispatch<any>) => { 
   dispatch({ type: LOADING_START });
@@ -311,9 +303,9 @@ export const startAppleLogin = () => async (dispatch: Dispatch<any>) => {
     const state = Crypto.randomUUID(); 
 
     if (Platform.OS === 'web') {
-      const provider = new OAuthProvider('apple.com');
+      const provider = new WebAuth.OAuthProvider('apple.com');
       // @ts-ignore
-      const result = await signInWithPopup(firebaseAuth, provider);
+      const result = await WebAuth.signInWithPopup(firebaseAuth, provider);
       dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(result.user) });
       dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
       return;
@@ -331,9 +323,11 @@ export const startAppleLogin = () => async (dispatch: Dispatch<any>) => {
       const response = await appleAuthAndroid.signIn();
       if (!response || !response.id_token) throw new Error("Android Apple Login Failed");
       
-      const credential = NativeAppleAuthProvider.credential(response.id_token, rawNonce);
+      // NATIVE MODULAR
+      const auth = getAuth();
+      const credential = AppleAuthProvider.credential(response.id_token, rawNonce);
 
-      const firebaseResult = await nativeSignInWithCredential(firebaseAuth, credential);
+      const firebaseResult = await signInWithCredential(auth, credential);
       dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(firebaseResult.user) });
       dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
     } 
@@ -352,9 +346,11 @@ export const startAppleLogin = () => async (dispatch: Dispatch<any>) => {
       const { identityToken } = credential;
       if (!identityToken) throw new Error("No Identity Token from Apple");
 
-      const fbCredential = NativeAppleAuthProvider.credential(identityToken, rawNonce);
+      // NATIVE MODULAR
+      const auth = getAuth();
+      const fbCredential = AppleAuthProvider.credential(identityToken, rawNonce);
       
-      const firebaseResult = await nativeSignInWithCredential(firebaseAuth, fbCredential);
+      const firebaseResult = await signInWithCredential(auth, fbCredential);
       dispatch({ type: LOGIN_SUCCESS, payload: mapFirebaseUser(firebaseResult.user) });
       dispatch({ type: SHOW_MODAL, payload: { type: 'WELCOME' } });
     }
@@ -374,9 +370,11 @@ export const logoutUser = () => async (dispatch: Dispatch) => {
   try {
     if (Platform.OS !== 'web') {
       try { await GoogleSignin.signOut(); } catch(e) {}
+      const auth = getAuth();
+      await signOut(auth);
+    } else {
+      await WebAuth.signOut(firebaseAuth);
     }
-    // FIX: Modular SignOut
-    await nativeSignOut(firebaseAuth);
     dispatch({ type: LOGOUT_SUCCESS });
   } catch (e) {
     console.error(e);

@@ -31,9 +31,10 @@
       "package": "movies.database",
       "googleServicesFile": "./src/firebase/google-services.json",
       "permissions": [
-        "com.google.android.gms.permission.AD_ID"
+        "com.google.android.gms.permission.AD_ID",
+        "android.permission.INTERNET"
       ],
-      "versionCode": 9
+      "versionCode": 10
     },
     "web": {
       "favicon": "./src/assets/favicon.png"

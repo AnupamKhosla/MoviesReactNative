@@ -18,27 +18,25 @@ export const REMOVE_FAVORITE_ITEM = "REMOVE_FAVORITE_ITEM";
 /* ------------------------------------------------------
    API SETUP
 -------------------------------------------------------*/
-const API_URL = "https://api.themoviedb.org/3/movie/popular";
-const API_KEY = process.env.EXPO_PUBLIC_API_KEY;
-const BASE_URL = `${API_URL}?api_key=${API_KEY}&page=1`;
-//testing lag
-//const BASE_URL = 'https://httpbin.org/delay/6'; //6s delay test
+// We now point to your Vercel Proxy (No API Key needed here)
+// Jio India blocks TMDB domain, so we use proxy to bypass that.
+const PROXY_URL = "https://movie-proxy-nine.vercel.app/api/tmdb";
+
 /* ------------------------------------------------------
    DEV-SAFE LOGS
-   (Won't leak keys in production)
 -------------------------------------------------------*/
 if (__DEV__) {
-  console.log("=== DEV MODE: TMDB CONFIG ===");
-  console.log("API KEY:", API_KEY); // good: only shown in dev mode
-  console.log("POPULAR MOVIES URL:", BASE_URL);
+  console.log("=== DEV MODE: PROXY CONFIG ===");
+  console.log("PROXY URL:", PROXY_URL);
+  console.log("Note: API Key is hidden on server side");
   console.log("==============================");
 }
 
 let firstSearchDone = false; //loading spinner on first search only
 
 
-//Themoviesdb server is sometimes down
-//We set timout 5secs on axios and retriy one more time and then show error.
+// Themoviesdb server if sometimes down (may be jio india old issue fixed with proxy now)
+// We set timout 5secs on axios and retry one more time and then show error.
 
 
 /* ------------------------------------------------------
@@ -53,8 +51,13 @@ export const getMovies = (tries = 0) => {
     try {
       if (__DEV__) console.log(`Fetching movies (attempt ${tries + 1})`);
 
-      const res = await axios.get(BASE_URL, {
-        timeout: 5000, // 5 second timeout IMPORTANT, API is down sometimes
+      // CHANGED: We send 'endpoint' param to let proxy know what to fetch
+      const res = await axios.get(PROXY_URL, {
+        params: {
+          endpoint: '/movie/popular',
+          page: 1
+        },
+        timeout: 5000, // 5 second timeout IMPORTANT
       });
 
       // Validate TMDB data
@@ -116,10 +119,14 @@ export const searchMovies = (query, tries = 0) => {
     try {
       if (__DEV__) console.log(`Search attempt ${tries + 1}:`, query);
 
-      const res = await axios.get(
-        `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`,
-        { timeout: 5000 }, // 5 second timeout
-      );
+      // CHANGED: We send 'endpoint' param and 'query' param
+      const res = await axios.get(PROXY_URL, {
+        params: {
+          endpoint: '/search/movie',
+          query: query
+        },
+        timeout: 5000, // 5 second timeout
+      });
 
       if (!res.data?.results) {
         if (__DEV__)

@@ -53,6 +53,7 @@ debug.keystore
 #api keys
 firebase
 src/firebase/
+src/firebase/tokensHiddenIgnored.txt
 #src/firebase/firebaseConfig.ts
 #src/firebase/GoogleService-Info.plist
 #src/firebase/google-services.json
